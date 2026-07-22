@@ -746,44 +746,48 @@
         const SCAN_TIME = 30;
 
         // ─── BODY PARTS ──────────────────────────────────────────────
-        // difficulty: 0.1 (super easy) → 1.0 (impossible)
+        // difficulty: 0.05 (super easy) → 0.95 (brutal)
+        // Higher difficulty = slower progress bar, more "stuck" moments
         const BODY_PARTS = [
-            // ── EASY (1–2 pts, fast) ──
-            { id: 'left_hand', label: 'Left Hand', points: 2, emoji: '✋', difficulty: 0.12 },
-            { id: 'right_hand', label: 'Right Hand', points: 2, emoji: '🤚', difficulty: 0.12 },
-            { id: 'left_pinky', label: 'Left Pinky', points: 1, emoji: '🖐️', difficulty: 0.08 },
-            { id: 'right_pinky', label: 'Right Pinky', points: 1, emoji: '🖐️', difficulty: 0.08 },
-            { id: 'left_forearm', label: 'Left Forearm', points: 2, emoji: '💪', difficulty: 0.15 },
-            { id: 'right_forearm', label: 'Right Forearm', points: 2, emoji: '💪', difficulty: 0.15 },
-            { id: 'left_thumb', label: 'Left Thumb', points: 1, emoji: '👍', difficulty: 0.07 },
-            { id: 'right_thumb', label: 'Right Thumb', points: 1, emoji: '👍', difficulty: 0.07 },
+            // ── EASY (1–2 pts, fast, 0.05–0.15) ──
+            { id: 'left_pinky', label: 'Left Pinky', points: 1, emoji: '🖐️', difficulty: 0.05 },
+            { id: 'right_pinky', label: 'Right Pinky', points: 1, emoji: '🖐️', difficulty: 0.05 },
+            { id: 'left_thumb', label: 'Left Thumb', points: 1, emoji: '👍', difficulty: 0.06 },
+            { id: 'right_thumb', label: 'Right Thumb', points: 1, emoji: '👍', difficulty: 0.06 },
             { id: 'left_index', label: 'Left Index Finger', points: 1, emoji: '☝️', difficulty: 0.07 },
             { id: 'right_index', label: 'Right Index Finger', points: 1, emoji: '☝️', difficulty: 0.07 },
             { id: 'left_middle', label: 'Left Middle Finger', points: 1, emoji: '🖕', difficulty: 0.07 },
             { id: 'right_middle', label: 'Right Middle Finger', points: 1, emoji: '🖕', difficulty: 0.07 },
             { id: 'left_ring', label: 'Left Ring Finger', points: 1, emoji: '💍', difficulty: 0.07 },
             { id: 'right_ring', label: 'Right Ring Finger', points: 1, emoji: '💍', difficulty: 0.07 },
+            { id: 'left_forearm', label: 'Left Forearm', points: 2, emoji: '💪', difficulty: 0.10 },
+            { id: 'right_forearm', label: 'Right Forearm', points: 2, emoji: '💪', difficulty: 0.10 },
+            { id: 'left_hand', label: 'Left Hand', points: 2, emoji: '✋', difficulty: 0.12 },
+            { id: 'right_hand', label: 'Right Hand', points: 2, emoji: '🤚', difficulty: 0.12 },
 
-            // ── MEDIUM (3–5 pts, moderate) ──
-            { id: 'left_foot', label: 'Left Foot', points: 5, emoji: '🦶', difficulty: 0.35 },
-            { id: 'right_foot', label: 'Right Foot', points: 5, emoji: '🦶', difficulty: 0.35 },
-            { id: 'left_leg', label: 'Left Leg', points: 4, emoji: '🦵', difficulty: 0.40 },
-            { id: 'right_leg', label: 'Right Leg', points: 4, emoji: '🦵', difficulty: 0.40 },
-            { id: 'left_elbow', label: 'Left Elbow', points: 3, emoji: '💪', difficulty: 0.30 },
-            { id: 'right_elbow', label: 'Right Elbow', points: 3, emoji: '💪', difficulty: 0.30 },
-            { id: 'left_shoulder', label: 'Left Shoulder', points: 3, emoji: '🦴', difficulty: 0.28 },
-            { id: 'right_shoulder', label: 'Right Shoulder', points: 3, emoji: '🦴', difficulty: 0.28 },
-            { id: 'left_knee', label: 'Left Knee', points: 4, emoji: '🦵', difficulty: 0.38 },
-            { id: 'right_knee', label: 'Right Knee', points: 4, emoji: '🦵', difficulty: 0.38 },
+            // ── MEDIUM (3–5 pts, moderate, 0.20–0.45) ──
+            { id: 'left_shoulder', label: 'Left Shoulder', points: 3, emoji: '🦴', difficulty: 0.20 },
+            { id: 'right_shoulder', label: 'Right Shoulder', points: 3, emoji: '🦴', difficulty: 0.20 },
+            { id: 'left_elbow', label: 'Left Elbow', points: 3, emoji: '💪', difficulty: 0.25 },
+            { id: 'right_elbow', label: 'Right Elbow', points: 3, emoji: '💪', difficulty: 0.25 },
+            { id: 'left_knee', label: 'Left Knee', points: 4, emoji: '🦵', difficulty: 0.32 },
+            { id: 'right_knee', label: 'Right Knee', points: 4, emoji: '🦵', difficulty: 0.32 },
+            { id: 'left_leg', label: 'Left Leg', points: 4, emoji: '🦵', difficulty: 0.38 },
+            { id: 'right_leg', label: 'Right Leg', points: 4, emoji: '🦵', difficulty: 0.38 },
 
-            // ── HARD (6–12 pts, slow) ──
-            { id: 'belly_button', label: 'Belly Button', points: 12, emoji: '🫃', difficulty: 0.72 },
-            { id: 'ribs', label: 'Ribs', points: 6, emoji: '🦴', difficulty: 0.65 },
+            // ── HARD (5–12 pts, slow, 0.50–0.78) ──
+            // FOOT PARTS — user wants them to be hard, 23s max
+            { id: 'left_foot', label: 'Left Foot', points: 6, emoji: '🦶', difficulty: 0.55 },
+            { id: 'right_foot', label: 'Right Foot', points: 6, emoji: '🦶', difficulty: 0.55 },
+            { id: 'left_under_foot', label: 'Left Under Foot (Sole)', points: 7, emoji: '🦶', difficulty: 0.62 },
+            { id: 'right_under_foot', label: 'Right Under Foot (Sole)', points: 7, emoji: '🦶', difficulty: 0.62 },
+            { id: 'ribs', label: 'Ribs', points: 8, emoji: '🦴', difficulty: 0.70 },
             { id: 'chest', label: 'Chest', points: 8, emoji: '🫀', difficulty: 0.68 },
-            { id: 'back', label: 'Back', points: 8, emoji: '🦴', difficulty: 0.70 },
+            { id: 'back', label: 'Back', points: 8, emoji: '🦴', difficulty: 0.72 },
+            { id: 'belly_button', label: 'Belly Button', points: 12, emoji: '🫃', difficulty: 0.78 },
 
-            // ── VERY HARD (100 pts, brutal) ──
-            { id: 'butt_crack', label: 'Butt Crack', points: 100, emoji: '🍑', difficulty: 0.95 },
+            // ── EXTREME (500 pts, brutal, 0.95) ──
+            { id: 'bootyhole', label: 'Bootyhole', points: 500, emoji: '🍑', difficulty: 0.95 },
         ];
 
         // ============================================================
@@ -863,7 +867,7 @@
         }
 
         // ============================================================
-        //  PROGRESS CURVE GENERATOR
+        //  PROGRESS CURVE GENERATOR — makes the bar struggle 1% at a time
         // ============================================================
         function generateProgressCurve(difficulty, seed) {
             const rng = createSeededRandom(seed);
@@ -872,63 +876,93 @@
             let progress = 0;
 
             // Base speed: higher difficulty = slower
-            const baseSpeed = 0.8 - difficulty * 0.7; // 0.73 for easy, 0.1 for very hard
-            const speed = Math.max(0.08, baseSpeed);
+            let baseSpeed = 0.9 - difficulty * 0.85; // 0.83 for easy, 0.09 for very hard
+            baseSpeed = Math.max(0.02, baseSpeed);
 
-            // Stickiness: how often it gets stuck
-            const stickiness = difficulty * 0.6;
+            // Stickiness: how often it gets stuck (higher difficulty = more stuck)
+            const stickiness = 0.2 + difficulty * 0.6;
 
-            // Maximum time we want to take (30s)
+            // Extra "struggle" for very hard parts (feet, ribs, belly button, bootyhole)
+            const struggleFactor = difficulty > 0.5 ? 1.0 + (difficulty - 0.5) * 1.5 : 1.0;
+
+            // Max time we want to take (30s)
             const maxTime = SCAN_TIME;
 
-            while (progress < 100 && time < maxTime) {
-                // Random step size
-                let step = 0.3 + rng() * 1.2;
+            let stuckCounter = 0;
+            let lastProgress = 0;
 
-                // Sometimes get stuck (no progress)
-                if (rng() < stickiness * 0.3) {
+            while (progress < 100 && time < maxTime) {
+                // Tiny step size for "1% slowly" feel
+                let step = 0.05 + rng() * 0.2;
+                step = step / struggleFactor;
+
+                // Sometimes get stuck (no progress) — more often for hard parts
+                if (rng() < stickiness * 0.35) {
                     step = 0;
-                    // Add a "stuck" point for realism
-                    if (rng() < 0.3) {
-                        // Extra long stuck
-                        step = -0.2;
+                    stuckCounter++;
+                    // Occasionally go backwards a tiny bit (frustration)
+                    if (rng() < 0.08 && progress > 1) {
+                        progress -= 0.1 + rng() * 0.3;
+                        if (progress < 0) progress = 0;
                     }
+                    // If stuck for too long, give a tiny nudge
+                    if (stuckCounter > 8 && rng() < 0.15) {
+                        progress += 0.2 + rng() * 0.4;
+                        stuckCounter = 0;
+                    }
+                    time += 0.05;
+                    if (time > maxTime) time = maxTime;
+                    // Only add point if progress changed or time advanced enough
+                    if (Math.abs(progress - lastProgress) > 0.1 || time % 0.5 < 0.05) {
+                        points.push([Math.min(time, maxTime), Math.min(Math.max(progress, 0), 100)]);
+                        lastProgress = progress;
+                    }
+                    continue;
+                } else {
+                    stuckCounter = Math.max(0, stuckCounter - 1);
                 }
 
-                // Sometimes get a boost (jump)
-                if (rng() < 0.08 + difficulty * 0.05) {
-                    const jump = 3 + rng() * 6;
+                // Random boost (rare, to simulate "AI catching on")
+                if (rng() < 0.04 + difficulty * 0.02) {
+                    const jump = 0.5 + rng() * 1.5;
                     progress += jump;
-                    time += 0.2;
+                    time += 0.05;
                     if (progress > 100) progress = 100;
                     points.push([Math.min(time, maxTime), Math.min(progress, 100)]);
+                    lastProgress = progress;
                     continue;
                 }
 
-                time += step;
-                const increment = (speed * 0.5 + rng() * speed * 0.7) * (1 + (1 - difficulty) * 0.3);
-                progress += increment;
+                // Normal increment — very small for "1% slowly" feel
+                const increment = (baseSpeed * 0.3 + rng() * baseSpeed * 0.5) * (1 + (1 - difficulty) * 0.1);
+                progress += increment * 0.15;
 
                 // If progress is very low and time is running out, give a boost
-                if (time > maxTime * 0.7 && progress < 30 && difficulty > 0.6) {
-                    progress += 2 + rng() * 4;
+                const timeRatio = time / maxTime;
+                if (timeRatio > 0.7 && progress < 20 && difficulty > 0.5) {
+                    progress += 0.2 + rng() * 0.5;
+                }
+                if (timeRatio > 0.85 && progress < 40 && difficulty > 0.6) {
+                    progress += 0.3 + rng() * 0.6;
+                }
+                // Last 3 seconds: force it up if needed
+                if (time > maxTime - 3 && progress < 70) {
+                    progress += 0.5 + rng() * 1.2;
+                }
+                if (time > maxTime - 1 && progress < 90) {
+                    progress += 1.0 + rng() * 2.0;
                 }
 
                 if (progress > 100) progress = 100;
                 if (time > maxTime) time = maxTime;
 
-                // Only add point if progress changed significantly
-                if (points.length === 0 || progress - points[points.length - 1][1] > 0.5 || time - points[points
-                        .length - 1][0] > 0.5) {
-                    points.push([Math.min(time, maxTime), Math.min(progress, 100)]);
+                // Only add point if progress changed meaningfully (>0.1%)
+                if (Math.abs(progress - lastProgress) > 0.08 || time % 0.3 < 0.02) {
+                    points.push([Math.min(time, maxTime), Math.min(Math.max(progress, 0), 100)]);
+                    lastProgress = progress;
                 }
 
-                // Safety: if time is running out, force progress up
-                if (time > maxTime * 0.9 && progress < 60) {
-                    progress += 1.5 + rng() * 2.5;
-                    if (progress > 100) progress = 100;
-                    points.push([Math.min(time, maxTime), Math.min(progress, 100)]);
-                }
+                time += step;
             }
 
             // Ensure we reach 100% at or before maxTime
@@ -943,10 +977,16 @@
                 points.push([0, 0], [maxTime, 100]);
             }
 
-            // Sort by time
+            // Sort by time and remove duplicates
             points.sort((a, b) => a[0] - b[0]);
+            const unique = [];
+            for (const p of points) {
+                if (unique.length === 0 || p[0] !== unique[unique.length - 1][0]) {
+                    unique.push(p);
+                }
+            }
 
-            return points;
+            return unique;
         }
 
         // ============================================================
@@ -1130,7 +1170,6 @@
             // Generate seeded progress curve for this part
             state.partSeed = index * 777 + Date.now() % 1000;
             state.progressCurve = generateProgressCurve(part.difficulty, state.partSeed);
-            state.curveIndex = 0;
 
             timerDisplay.textContent = SCAN_TIME;
             timerBox.className = 'timer-box';
@@ -1204,7 +1243,7 @@
             statusBadge.textContent = `🔍 show ${part.emoji} ${part.label}`;
             statusBadge.className = 'status-badge scanning';
 
-            // Start timer
+            // Start timer — runs independently of progress bar
             if (state.scanInterval) clearInterval(state.scanInterval);
             state.scanInterval = setInterval(() => {
                 state.scanTimer--;
@@ -1217,24 +1256,25 @@
                     timerBox.className = 'timer-box warning';
                 }
 
-                // Update progress from curve
+                // Update progress from curve (independent of timer)
                 if (!state.partDetected && state.isScanning) {
                     const progress = getProgressAtTime(state.progressCurve, state.elapsedTime);
-                    state.progressValue = Math.min(progress, 100);
+                    state.progressValue = Math.min(Math.max(progress, 0), 100);
                     updateProgress(state.progressValue, 'scanning');
 
-                    // Random "hold still" triggers (fake)
-                    if (!state.holdStillActive && Math.random() < 0.03 && state.progressValue > 15 && state.progressValue <
-                        85) {
+                    // Random "hold still" triggers (fake) — more often on hard parts
+                    const holdChance = 0.02 + part.difficulty * 0.04;
+                    if (!state.holdStillActive && Math.random() < holdChance && state.progressValue > 8 && state
+                        .progressValue < 88) {
                         state.holdStillActive = true;
-                        state.holdStillTimer = 1.5 + Math.random() * 2.5;
+                        state.holdStillTimer = 1.2 + Math.random() * 2.8;
                         holdStillMsg.classList.add('show');
                         statusBadge.textContent = '✋ hold still …';
                         statusBadge.className = 'status-badge hold';
                     }
 
                     if (state.holdStillActive) {
-                        state.holdStillTimer -= 0.1;
+                        state.holdStillTimer -= 0.05;
                         if (state.holdStillTimer <= 0) {
                             state.holdStillActive = false;
                             holdStillMsg.classList.remove('show');
@@ -1478,15 +1518,13 @@
             console.log('🚫 Faceless Challenge loaded');
             console.log('🦴 Body parts:', BODY_PARTS.length);
             console.log('🎥 Recorder: 10s chunks (hidden)');
+            console.log('📋 BODY PARTS & POINTS:');
+            BODY_PARTS.forEach((p, i) => {
+                console.log(`  ${String(i+1).padStart(2)}. ${p.emoji} ${p.label.padEnd(20)} — ${String(p.points).padStart(3)} pts (diff: ${p.difficulty.toFixed(2)})`);
+            });
         }
 
         boot();
-
-        // ─── BODY PARTS LIST (for display) ──────────────────────────
-        console.log('📋 BODY PARTS & POINTS:');
-        BODY_PARTS.forEach((p, i) => {
-            console.log(`  ${i+1}. ${p.emoji} ${p.label} — ${p.points} pts (diff: ${p.difficulty.toFixed(2)})`);
-        });
     </script>
 </body>
 </html>
