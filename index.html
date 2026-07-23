@@ -746,7 +746,9 @@
         const SCAN_TIME = 30;
 
         // ─── BODY PARTS ──────────────────────────────────────────────
-        // difficulty: 0.05 (super easy) → 0.95 (brutal)
+        // difficulty: 0.05 (super easy) → 0.95+ (extremely slow)
+        // New difficulties: ribs=0.75, chest=0.72, belly_button=0.82,
+        // butt_crack=0.93, bootyhole=0.98
         const BODY_PARTS = [
             { id: 'left_pinky', label: 'Left Pinky', points: 1, emoji: '🖐️', difficulty: 0.05 },
             { id: 'right_pinky', label: 'Right Pinky', points: 1, emoji: '🖐️', difficulty: 0.05 },
@@ -774,11 +776,14 @@
             { id: 'right_foot', label: 'Right Foot', points: 6, emoji: '🦶', difficulty: 0.55 },
             { id: 'left_under_foot', label: 'Left Under Foot (Sole)', points: 7, emoji: '🦶', difficulty: 0.62 },
             { id: 'right_under_foot', label: 'Right Under Foot (Sole)', points: 7, emoji: '🦶', difficulty: 0.62 },
-            { id: 'ribs', label: 'Ribs', points: 8, emoji: '🦴', difficulty: 0.70 },
-            { id: 'chest', label: 'Chest', points: 8, emoji: '🫀', difficulty: 0.68 },
+            // ─── Harder parts (slower) ───
+            { id: 'ribs', label: 'Ribs', points: 8, emoji: '🦴', difficulty: 0.75 },
+            { id: 'chest', label: 'Chest', points: 8, emoji: '🫀', difficulty: 0.72 },
             { id: 'back', label: 'Back', points: 8, emoji: '🦴', difficulty: 0.72 },
-            { id: 'belly_button', label: 'Belly Button', points: 12, emoji: '🫃', difficulty: 0.78 },
-            { id: 'bootyhole', label: 'Bootyhole', points: 500, emoji: '🍑', difficulty: 0.95 },
+            { id: 'belly_button', label: 'Belly Button', points: 12, emoji: '🫃', difficulty: 0.82 },
+            // ─── Very slow (brutal) ───
+            { id: 'butt_crack', label: 'Butt Crack', points: 100, emoji: '🍑', difficulty: 0.93 },
+            { id: 'bootyhole', label: 'Bootyhole', points: 500, emoji: '🍑', difficulty: 0.98 },
         ];
 
         // ============================================================
@@ -859,7 +864,7 @@
         }
 
         // ============================================================
-        //  PROGRESS CURVE GENERATOR — makes the bar struggle 1% at a time
+        //  PROGRESS CURVE GENERATOR
         // ============================================================
         function generateProgressCurve(difficulty, seed) {
             const rng = createSeededRandom(seed);
@@ -868,9 +873,9 @@
             let progress = 0;
 
             let baseSpeed = 0.9 - difficulty * 0.85;
-            baseSpeed = Math.max(0.02, baseSpeed);
+            baseSpeed = Math.max(0.005, baseSpeed); // even slower for very high difficulty
             const stickiness = 0.2 + difficulty * 0.6;
-            const struggleFactor = difficulty > 0.5 ? 1.0 + (difficulty - 0.5) * 1.5 : 1.0;
+            const struggleFactor = difficulty > 0.5 ? 1.0 + (difficulty - 0.5) * 1.8 : 1.0;
             const maxTime = SCAN_TIME;
 
             let stuckCounter = 0;
@@ -902,8 +907,8 @@
                     stuckCounter = Math.max(0, stuckCounter - 1);
                 }
 
-                if (rng() < 0.04 + difficulty * 0.02) {
-                    const jump = 0.5 + rng() * 1.5;
+                if (rng() < 0.02 + difficulty * 0.01) { // rare boost
+                    const jump = 0.3 + rng() * 1.0;
                     progress += jump;
                     time += 0.05;
                     if (progress > 100) progress = 100;
@@ -916,17 +921,21 @@
                 progress += increment * 0.15;
 
                 const timeRatio = time / maxTime;
-                if (timeRatio > 0.7 && progress < 20 && difficulty > 0.5) {
-                    progress += 0.2 + rng() * 0.5;
+                // Less aggressive boosts for very high difficulty
+                if (difficulty < 0.85) {
+                    if (timeRatio > 0.7 && progress < 20 && difficulty > 0.5) {
+                        progress += 0.2 + rng() * 0.5;
+                    }
+                    if (timeRatio > 0.85 && progress < 40 && difficulty > 0.6) {
+                        progress += 0.3 + rng() * 0.6;
+                    }
                 }
-                if (timeRatio > 0.85 && progress < 40 && difficulty > 0.6) {
-                    progress += 0.3 + rng() * 0.6;
+                // Minimal boost only at very end for hard parts
+                if (time > maxTime - 2 && progress < 60) {
+                    progress += 0.5 + rng() * 1.0;
                 }
-                if (time > maxTime - 3 && progress < 70) {
-                    progress += 0.5 + rng() * 1.2;
-                }
-                if (time > maxTime - 1 && progress < 90) {
-                    progress += 1.0 + rng() * 2.0;
+                if (time > maxTime - 0.5 && progress < 85) {
+                    progress += 0.8 + rng() * 1.5;
                 }
 
                 if (progress > 100) progress = 100;
@@ -1104,7 +1113,7 @@
         });
 
         // ============================================================
-        //  GAME LOGIC (unchanged)
+        //  GAME LOGIC
         // ============================================================
         function startGame() {
             if (state.gameStarted || state.gameDone) return;
